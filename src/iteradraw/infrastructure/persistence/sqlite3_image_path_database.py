@@ -7,7 +7,7 @@ from typing import (
 )
 
 from iteradraw.domain.exceptions import CommitError
-from iteradraw.domain.repositories.interfaces import ImagePathDatabase
+from iteradraw.interfaces import ImagePathDatabase
 
 """
 This module defines all backends with which the DatabaseManager from Draw-This

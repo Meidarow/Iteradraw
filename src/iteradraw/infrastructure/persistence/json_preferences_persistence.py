@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Optional, Callable
 
-from iteradraw.domain.repositories.interfaces import PreferencePersistence
+from iteradraw.interfaces import PreferencePersistence
 
 """
 Persistence layer backend for Draw-This.

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from iteradraw.application.commands.interfaces import Command
+from iteradraw.interfaces import Command
 
 """
 Commands

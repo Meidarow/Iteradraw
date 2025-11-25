@@ -25,7 +25,7 @@ Usage:
 from typing import Callable
 
 from iteradraw.domain.models.session import Session
-from iteradraw.domain.repositories.interfaces import Persistence
+from iteradraw.interfaces import Persistence
 from iteradraw.infrastructure.persistence.json_preferences_persistence import (
     JsonPersistence,
 )

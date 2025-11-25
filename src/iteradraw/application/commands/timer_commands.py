@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from iteradraw.application.commands.interfaces import Command
+from iteradraw.interfaces import Command
 
 
 @dataclass(frozen=True)

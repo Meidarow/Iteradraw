@@ -11,6 +11,7 @@ Classes:
     ChangeFolderEnabledCommandHandler
     ChangeAllFoldersEnabledCommandHandler
 """
+from typing import TYPE_CHECKING
 
 from iteradraw.application.commands.folder_commands import (
     AddFolderCommand,
@@ -22,7 +23,7 @@ from iteradraw.application.commands.folder_commands import (
     SetAllFoldersEnabledCommand,
     MoveFolderBetweenFolderSetsCommand,
 )
-from iteradraw.application.handlers.interfaces import IdGenerator
+from iteradraw.interfaces import IdGenerator
 from iteradraw.domain.events.domain_events import (
     FolderAdded,
     FolderRemoved,
@@ -35,7 +36,9 @@ from iteradraw.domain.events.domain_events import (
 )
 from iteradraw.domain.models.folder import FolderSet
 from iteradraw.domain.repositories.folder_repository import FolderRepository
-from iteradraw.infrastructure.buses.event_bus import EventBus
+
+if TYPE_CHECKING:
+    from iteradraw.infrastructure.buses.event_bus import EventBus
 
 
 class AddFolderCommandHandler:

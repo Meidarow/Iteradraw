@@ -1,7 +1,7 @@
 import threading
 from typing import Type, Callable
 
-from iteradraw.application.commands.interfaces import Command
+from iteradraw.interfaces import Command
 
 
 class CommandBus:

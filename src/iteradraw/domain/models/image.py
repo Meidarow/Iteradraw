@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, NamedTuple
 
 if TYPE_CHECKING:
-    from iteradraw.infrastructure.filesystem.interfaces import DirEntryLike
+    from iteradraw.interfaces import DirEntryLike
 
 """
 This module holds the definitions for all dataclasses used by the

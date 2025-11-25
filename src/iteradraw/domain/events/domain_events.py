@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from iteradraw.domain.events.interfaces import Event
+from iteradraw.interfaces import Event
 from iteradraw.domain.models.folder import FolderSet
 
 

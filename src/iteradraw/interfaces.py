@@ -1,10 +1,61 @@
-from typing import (
-    Iterable,
-    Any,
-)
-from typing import (
-    Protocol,
-)
+from abc import ABC
+from typing import runtime_checkable, Protocol, Iterator, Iterable, Any
+from uuid import UUID
+
+from iteradraw.shared.types import PathLike
+
+
+
+class Command(Protocol):
+    ...
+
+
+class Event(Protocol):
+    ...
+
+class ICache(ABC):
+    def get(self): ...
+    def put(self): ...
+
+class IdGenerator(Protocol):
+    def generate(self) -> UUID:
+        ...
+
+@runtime_checkable
+class StatLike(Protocol):
+    st_mtime: float
+    st_ino: int
+    st_dev: int
+
+
+@runtime_checkable
+class DirEntryLike(Protocol):
+    path: str
+
+    def is_dir(self) -> bool:
+        ...
+
+    def is_symlink(self) -> bool:
+        ...
+
+    def stat(self) -> "StatLike":
+        ...
+
+
+@runtime_checkable
+class FilterLike(Protocol):
+    def add(self, item: str) -> None:
+        ...
+
+    def __contains__(self, item: str) -> bool:
+        ...
+
+
+@runtime_checkable
+class DirectoryScanner(Protocol):
+    def __call__(self, directory: PathLike) -> Iterator["DirEntryLike"]:
+        ...
+
 
 """
 Interface protocols for the persistence layer of Iteradraw.
@@ -21,7 +72,7 @@ sessions.
 Classes:
     DatabaseBackend: protocol for session resource management backends.
     Persistence: protocol for settings/user-prefs/content backends.
- 
+
 Usage:
 
 """
