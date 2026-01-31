@@ -55,6 +55,22 @@ class DependencyContainer:
     def _install_modules(self):
         CommandAssignment().register(self.container)
 
+class UserInterfaceAssignment:
+    def __init__(self):
+        self.folder_repo = None
+        self.command_bus = None
+        self.event_bus = None
+
+    def register(self, container):
+        self.event_bus = container["event_bus"]
+        self.command_bus = container["command_bus"]
+        self.image_repo = container["image_repo"] # TODO Image Database
+        self._assign_render_pipeline()
+
+    def _assign_render_pipeline(self):
+        
+        ...
+
 
 class CommandAssignment:
     def __init__(self):

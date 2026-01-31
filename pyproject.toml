@@ -1,5 +1,5 @@
 [project]
-name = "drawthis"
+name = "iteradraw"
 version = "2.0.0"
 description = "Compact and self-contained image slideshow app meant for art/gesture practice sessions."
 authors = [
@@ -15,7 +15,6 @@ dependencies = [
     "black (>=25.9.0,<26.0.0)",
     "pillow-simd (>=9.5.0.post2,<10.0.0)",
     "pybloom-live (>=4.0.0,<5.0.0)",
-    "notebook (>=7.4.7,<8.0.0)",
     "pyside6 (>=6.10.0,<7.0.0)",
 ]
 packages = []

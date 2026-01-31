@@ -1,4 +1,4 @@
-class SlideshowManager:
+class PlaylistService:
     """
     High-level controller for slideshow backends.
 
@@ -35,3 +35,13 @@ class SlideshowManager:
         return
 
     # Private helpers
+
+    def load_images(self):
+        """
+        Place images in a deque, for two-way navigation and display first
+        image.
+        """
+        self.images = deque(
+            [Path(p) for p in DatabaseManager(DATABASE_FILE).load_all_rows()]
+        )
+        self._set_texture(self.images[0])

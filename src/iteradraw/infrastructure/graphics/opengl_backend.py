@@ -6,13 +6,8 @@ from pathlib import Path
 import moderngl_window as mglw
 import moderngl_window.context.glfw
 import numpy as np
-from PIL import UnidentifiedImageError, Image
-from drawthis.core.constants import DATABASE_FILE
-from drawthis.core.events.logger import logger
-from moderngl_window.context.base import KeyModifiers
+from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
-from drawthis.gui.shaders.shader_parser import parse_shader
-from drawthis.services.resources.file_discovery_service import DatabaseManager
 
 """
 OpenGL Backend for Draw-This.
@@ -32,6 +27,11 @@ Usage
 This file is imported as a package according to the following:
     from drawthis import RenderWindow, start_slideshow_ogl
 """
+
+
+class RenderTab(QOpenGLWidget):
+    def __init__(self):
+        super().__init__()
 
 
 class RenderWindow(mglw.WindowConfig):
@@ -55,18 +55,6 @@ class RenderWindow(mglw.WindowConfig):
 
         self._setup_shaders()
         self._setup_vao()
-
-    # Public API
-
-    def load_images(self):
-        """
-        Place images in a deque, for two-way navigation and display first
-        image.
-        """
-        self.images = deque(
-            [Path(p) for p in DatabaseManager(DATABASE_FILE).load_all_rows()]
-        )
-        self._set_texture(self.images[0])
 
     # Event handlers
 
@@ -201,82 +189,6 @@ class RenderWindow(mglw.WindowConfig):
 
 
 # Functions
-
-
-def load_image(path: str | Path) -> tuple[np.ndarray, tuple[int, int]]:
-    p = Path(path)
-    try:
-        suffix = path.suffix.lower()
-        if suffix in {".jp2", ".j2k", ".jpx"}:
-            image = load_raw_image_pyav(p)
-        else:
-            image = load_raw_image_psimd(p)
-
-        rgba_image = ensure_rgba_format(image)
-    except FileNotFoundError:
-        logger.error(f"Could not be locate image file: {path}", exc_info=True)
-        raise
-    except UnidentifiedImageError:
-        logger.error(f"Could not identify image file: {path}", exc_info=True)
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error when opening image file {path}: {e}")
-        raise
-    h, w = rgba_image.shape[:2]
-    return rgba_image, (w, h)
-
-
-def load_raw_image_pyav(path: Path) -> np.ndarray:
-    """Load image with imageio.v3 with pyav, return as array"""
-    # PYAV returns a list of frames; we want the first (and only) one.
-    import av  # imported lazily – only needed for JP2
-
-    container = av.open(str(path))
-    frame = next(container.decode(video=0))  # first frame
-    container.close()
-    image = frame.to_ndarray(format="rgb24")  # (h, w, 3) uint8
-    return image
-
-
-def load_raw_image_psimd(path: Path) -> np.ndarray:
-    """Load image with pillow-simd, return as array"""
-    image = np.asarray(
-        Image.open(
-            fp=path,
-            mode="r",
-        ).convert(
-            "RGBA",
-            dither=None,
-        )
-    )
-    return image
-
-
-def ensure_rgba_format(image: np.ndarray) -> np.ndarray:
-    """Return RGBA (h, w, 4) image with opaque alpha channel."""
-    if image.ndim == 3 and image.shape[2] == 4:  # already RGBA
-        return image
-    rgb = ensure_three_dimensions(image)
-    a = np.full((rgb.shape[0], rgb.shape[1], 1), 255, dtype=rgb.dtype)
-    return np.concatenate([rgb, a], axis=2)  # adds opaque alpha
-
-
-def ensure_three_dimensions(image: np.ndarray) -> np.ndarray:
-    """Return RGB (h, w, 3), 3-dimensional, 3 channel image array."""
-    dimensions = image.ndim
-
-    if dimensions == 3:  # (h, w, channels)
-        channels = image.shape[2]
-        if channels == 3:
-            return image
-        if channels == 1:
-            return np.repeat(image, 3, axis=2)
-        raise ValueError(f"Unsupported number of channels: {channels}")
-
-    if dimensions == 2:  # (h, w)
-        return np.repeat(image[..., np.newaxis], 3, axis=2)
-    raise ValueError(f"Unsupported number of dimensions: {dimensions}")
-
 
 def start_slideshow_ogl(
     queue: multiprocessing.Queue = None,
