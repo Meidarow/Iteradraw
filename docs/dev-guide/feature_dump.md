@@ -20,3 +20,4 @@ Suggestions:
 * Community features (sharing reference packs) (legality?)
 * AI integration (pose detection, style analysis) (HAHAHAHAH AI? No)
 * Export to various formats (likely)
+* Create a splash screen for long laoding sections (possible with Qt, but necessary?)

@@ -1,21 +1,21 @@
 """
-Behavioral contract: removal ops must always...
+    Behavioral contract: removal ops must always...
 
-Assumptions:
-  - Removal criteria is a field in a row, thus contained in an ImageRow
-  - Provided data is iterable or singular
+    Assumptions:
+      - Removal criteria is a field in a row, thus contained in an ImageRow
+      - Provided data is iterable or singular
 
-Expected behavior:
-EB1 Every entry that matches removal criteria should be removed DB
-    (regardless of other fields)
-EB2 All entries that have not been removed are unaltered DB
-EB3 Row IDs are reordered to maintain exact order of remaining rows DB
+    Expected behavior:
+    EB1 Every entry that matches removal criteria should be removed DB
+        (regardless of other fields)
+    EB2 All entries that have not been removed are unaltered DB
+    EB3 Row IDs are reordered to maintain exact order of remaining rows DB
 
-Acceptance criteria:
-AC1 Database contains no matching entries after removal DB
-AC2 Remaining entries are unaltered (except for primary ID) DB
-AC3 Partial matches are not altered DB
-AC4 Each removal query (by provided criteria) is atomic REPO
+    Acceptance criteria:
+    AC1 Database contains no matching entries after removal DB
+    AC2 Remaining entries are unaltered (except for primary ID) DB
+    AC3 Partial matches are not altered DB
+    AC4 Each removal query (by provided criteria) is atomic REPO
 """
 
 """
@@ -37,7 +37,7 @@ AC4 Each removal query (by provided criteria) is atomic REPO
     criterion REPO+HANDLER
     AC2 Ordering and indexing are reproducible given the same criterion 
     REPO+HANDLER
-    """
+"""
 
 """
     Behavioral contract: Insert ops must always...

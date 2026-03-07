@@ -9,6 +9,54 @@ When you return after a break, do this:
 2. Open the last modified module — check the commit message or devlog entry date.  
 3. Write a **“Warm-up Plan”** before you code: 3–5 bullets of what you’ll accomplish that day.
 
+## [2026-02-25]
+
+
+## [2026-01-12]
+Done: Finalized minimal ImageViewer functionality, containing the following:
+      scales images and centering, black background, antialiasing, displays arbitrary image.
+      Created story to test out slideshow startup sequence and mainscreen takeover.
+
+Note: With the StackedLayout approach the ImageViewerWidget exists constantly.
+
+Next: Create initialization/finalization methods for the ImageViewerWidget, incorporate Event & Command bus into handlers
+use Qt signals and slots for User interaction with the ImageViewerWidget, and incorporate homogenous use of the @Slot
+decorator across views.
+
+
+## [2026-01-11]
+Done: Begin implementation of the paintEvent method and minor changes to slideshow_view.
+
+Note:It seems that calling a new painter does simply not work on top of the existing QPaintDevice (current widget).
+
+Next: Finish implementing paintEvent, which is called every .update() and .repaint().
+
+## [2026-01-06]
+### Creating the canvas to display images on
+Ruled out the option of QMDISubWindows for creating the slideshow window, since this is for Multiple Document Interfaces 
+where an application can open many documents simultaneously with them all sharing the toolbar/sidedocks of the main 
+application window, which is not the case for Iteradraw, it seems the most appropriate way to perform the desired behaviour
+is to either create a widget that displays over the totality of the main window, or creating a QSubWindow. In any case
+creating the widget that will be used to display the images comes first. 
+The process:
+Create Slideshow widget -> Create QPainter -> call drawPixmap(image_path)
+The outline above seems to be the simplest process to display an image on a give widget.
+According to [Qt docs](https://doc.qt.io/qtforpython-6/PySide6/QtGui/QPainter.html#PySide6.QtGui.QPainter:~:text=Both%20drawPixmap()%20and%20drawImage()%20produce%20the%20same%20result%2C%20except%20that%20drawPixmap()%20is%20faster%20on%2Dscreen%20while%20drawImage()%20may%20be%20faster%20on%20a%20QPrinter%20or%20other%20devices.)
+drawPixmap is the fastest method for on-screen drawing whereas draw image can be faster for other devices such as QPrinter
+For today I stubbed out the Canvas class and the SlideshowView class in slideshow_views.py.
+
+Consider how to use the parent property of the constructor, since not defining a parent explicitly allows for the creation
+of a separate window, however it also makes it so that the new window may not be automatically deleted when the parent, 
+or the MainWindow of the application, gets closed/deleted.
+
+##[2026-01-31]
+### Beginning cache implementation for rendering pipeline
+This session I read over the previous ADR for the image caching strategy and maintained the previous decision, only
+slightly refining the log. I intend to implement each layer of the stacking cache separately, as each one has its own 
+optimal structure and these can be wrapped by a thin operator layer.
+Additionally, since I am currently working on a Mac, I intend to begin with platform-agnostic or universal approach,
+either allowing the app to figure out path formats and hardware constraints on the fly or converting them at runtime.
+
 ## [2025-11-25] — Rendering vertical slice
 ###  Integrating render pipeline using the Qt framework
 I opted to leave the side panel construction for some later opportunity and instead to focus on building the rendering

@@ -1,23 +1,30 @@
 [project]
 name = "iteradraw"
-version = "2.0.0"
+version = "0.0.1"
 description = "Compact and self-contained image slideshow app meant for art/gesture practice sessions."
 authors = [
     {name = "Meidarow",email = "60526952+Meidarow@users.noreply.github.com"}
 ]
-readme = "README.md"
-requires-python = ">=3.12,<3.14"
+readme = "docs/README.md"
+requires-python = ">=3.12, <3.15"
 dependencies = [
     "moderngl-window (>=3.1.1,<4.0.0)",
     "blinker (>=1.9.0,<2.0.0)",
     "imageio[pyav] (>=2.37.0,<3.0.0)",
     "glfw (>=2.10.0,<3.0.0)",
     "black (>=25.9.0,<26.0.0)",
-    "pillow-simd (>=9.5.0.post2,<10.0.0)",
     "pybloom-live (>=4.0.0,<5.0.0)",
+    "notebook (>=7.4.7,<8.0.0)",
     "pyside6 (>=6.10.0,<7.0.0)",
 ]
-packages = []
+packages = [{include = "iteradraw"}]
+
+[tool.poetry.dependencies]
+pillow = { version = "^10.2", markers = "sys_platform == 'darwin'" }
+pillow-simd = { version = ">=9.0.0", markers = "sys_platform == 'linux' and platform_machine != 'aarch64'" }
+
+[tool.poetry]
+package-mode = true
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

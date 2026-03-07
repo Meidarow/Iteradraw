@@ -2,13 +2,13 @@ This document decribes the architecture and intention behind the design of Itera
 
 ## Iteradraw
 ### Big picture
-The main intention with Iteradraw is ultimately to provide an essential artist compation app,
+The main intention with Iteradraw is ultimately to provide an essential artist companion app,
 that allows users to hold gesture drawing/slideshow sessions for iterative practice,
 alongside a streak/study-tracking framework.
 
 The primary window allows the user to configure and start slideshow sessions.
 In this page, the user can define groups of folders and select folders to be used as
-sources for images for the slideshow. Aditionally the user can select a singular 
+sources for images for the slideshow. Additionally, the user can select a singular 
 timer to be used for all slides, or define a number os timers to be run sequentially 
 in a "pre-defined session". Ultimately the user may choose between a sorted indexing
 of the images or randomize the sequence --- in interface: "shuffle" --- and begin 
@@ -21,7 +21,7 @@ This app has two core pillars to its philosophy:
 the slideshow, and considering that a large cohort of users is likely to prefer
 digital art, we must run a tight ship. Art apps are known to be resource hungry; we don't want to step on their toes.
 2) Fast: Simple, but the more important of the pillars. People want their 
-images to show up immediatelly, not after 4 seconds. We intend to offer massive 
+images to show up immediately, not after 4 seconds. We intend to offer excellent 
 perceived speed, a clean and smooth UX and a responsive-at-all-times UI.
 
 In terms of metrics, these can be summed up as:

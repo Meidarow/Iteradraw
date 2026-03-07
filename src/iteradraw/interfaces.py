@@ -1,14 +1,21 @@
 from abc import ABC
-from typing import runtime_checkable, Protocol, Iterator, Iterable, Any
+from os import PathLike
+from typing import runtime_checkable, Protocol, Iterator, Iterable, Any, Type, TypeVar, Generic
 from uuid import UUID
 
-from iteradraw.shared.types import PathLike
-
+from iteradraw.core.domain.models.folder import FolderSet
 
 
 class Command(Protocol):
     ...
 
+
+TCommand = TypeVar("TCommand", bound="Command")
+
+class CommandHandler(ABC, Generic[TCommand]):
+    command_type : Type[TCommand]
+    def handle(self, command: TCommand):
+        ...
 
 class Event(Protocol):
     ...
@@ -17,6 +24,7 @@ class ICache(ABC):
     def get(self): ...
     def put(self): ...
 
+@runtime_checkable
 class IdGenerator(Protocol):
     def generate(self) -> UUID:
         ...
@@ -62,7 +70,7 @@ Interface protocols for the persistence layer of Iteradraw.
 
 This module defines protocols that apply generically and universally to all 
 backend implementations meant for persistence, with the intention of 
-simplyfying persistence operations, encapsulating persistence domain 
+simplifying persistence operations, encapsulating persistence domain 
 knowledge to its layer and allowing hot-swapping of backends
 
 Iteradraw uses persistence in two ways: settings and session storage for 
@@ -78,7 +86,29 @@ Usage:
 """
 
 
-class ImagePathDatabase(Protocol):
+class FolderRepository(Protocol):
+    """
+    Repository for FolderSet domain objects.
+    """
+
+    def __init__(self, persistence):
+        ...
+
+    def get(self, folderset_id: UUID) -> FolderSet:
+        ...
+
+    def get_all(self) -> list[FolderSet]:
+        ...
+
+    def save(self, folderset: FolderSet):
+        ...
+
+    def remove(self, folderset_id: UUID):
+        ...
+
+
+
+class SessionRepository(Protocol):
     """Abstract interface for database backends used in Draw-This."""
 
     def initialize(self) -> None:
