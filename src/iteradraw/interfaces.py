@@ -25,43 +25,8 @@ class ICache(ABC):
     def put(self): ...
 
 @runtime_checkable
-class IdGenerator(Protocol):
-    def generate(self) -> UUID:
-        ...
-
-@runtime_checkable
-class StatLike(Protocol):
-    st_mtime: float
-    st_ino: int
-    st_dev: int
-
-
-@runtime_checkable
-class DirEntryLike(Protocol):
-    path: str
-
-    def is_dir(self) -> bool:
-        ...
-
-    def is_symlink(self) -> bool:
-        ...
-
-    def stat(self) -> "StatLike":
-        ...
-
-
-@runtime_checkable
-class FilterLike(Protocol):
-    def add(self, item: str) -> None:
-        ...
-
-    def __contains__(self, item: str) -> bool:
-        ...
-
-
-@runtime_checkable
 class DirectoryScanner(Protocol):
-    def __call__(self, directory: PathLike) -> Iterator["DirEntryLike"]:
+    def __call__(self, directory: PathLike) -> Iterator[Any]:
         ...
 
 
@@ -90,11 +55,10 @@ class FolderRepository(Protocol):
     """
     Repository for FolderSet domain objects.
     """
-
-    def __init__(self, persistence):
+    def get(self, folderset_id: int) -> FolderSet:
         ...
 
-    def get(self, folderset_id: UUID) -> FolderSet:
+    def register_folderset(self, folderset_name: str) -> int:
         ...
 
     def get_all(self) -> list[FolderSet]:
@@ -103,7 +67,7 @@ class FolderRepository(Protocol):
     def save(self, folderset: FolderSet):
         ...
 
-    def remove(self, folderset_id: UUID):
+    def remove(self, folderset_id: int):
         ...
 
 
@@ -114,48 +78,8 @@ class SessionRepository(Protocol):
     def initialize(self) -> None:
         """Establish a connection and prepare for access."""
 
-    def clear_all(self) -> None:
-        """Remove all rows from the database (reset state)."""
-
     def setup_schema(self) -> None:
         """Initialize database schema if not already created."""
-
-    def insert_rows(self, rows: Iterable[tuple]) -> int:
-        """
-        Insert multiple rows into the database.
-
-        Args:
-            rows: An iterable of row tuples matching schema.
-        Returns:
-            int: Number of rows successfully inserted.
-        """
-
-    def remove_rows(self, paths: Iterable[str]) -> int:
-        """
-        Remove rows that match given file paths.
-
-        Args:
-            paths: Iterable of file paths to delete.
-        Returns:
-            int: Number of rows removed.
-        """
-
-    def mark_seen(self, ids: Iterable[Any], seen: bool = True) -> int:
-        """
-        Update the 'seen' status of rows.
-
-        Args:
-            ids: Iterable of row IDs.
-            seen: New seen status (default True).
-        Returns:
-            int: Number of rows updated.
-        """
-
-    def shuffle(self) -> None:
-        """
-        Apply randomization strategy (if supported).
-        For SQLite this might reorder rows, for other backends it may differ.
-        """
 
 
 class PreferencesPersistence(Protocol):
