@@ -26,7 +26,7 @@ from iteradraw.core.application.commands.folder_commands import (
 from iteradraw.core.domain.events.folder_events import FolderSetRenamed, FolderRemoved, FolderAdded, FolderSetAdded, \
     FolderSetRemoved, FolderEnabledSet, AllFoldersEnabledSet, FolderMovedBetweenFolderSets
 from iteradraw.core.infrastructure.buses.event_bus import EventBus
-from iteradraw.interfaces import IdGenerator, CommandHandler
+from iteradraw.interfaces import CommandHandler
 from iteradraw.core.domain.models.folder import FolderSet
 from iteradraw.core.domain.repositories.folder_repository import FolderRepository
 
@@ -90,16 +90,14 @@ class AddFolderSetCommandHandler(CommandHandler[AddFolderSetCommand]):
         self,
         folder_repo: FolderRepository,
         event_bus: EventBus,
-        id_generator: IdGenerator,
     ):
         self.folder_repo = folder_repo
         self.event_bus = event_bus
-        self.id_generator = id_generator
 
     def handle(self, command: AddFolderSetCommand):
-        new_folderset_id = self.id_generator.generate()
+        new_folderset_id = self.folder_repo.register_folderset(command.display_name)
         new_folderset = FolderSet(
-            uuid=new_folderset_id, display_name=command.display_name
+            id=new_folderset_id, display_name=command.display_name
         )
         self.folder_repo.save(folderset=new_folderset)
         evt = FolderSetAdded(folderset=new_folderset)

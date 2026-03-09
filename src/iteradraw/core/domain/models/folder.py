@@ -1,9 +1,7 @@
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
+from pathlib import Path
 from typing import TYPE_CHECKING
-from uuid import UUID
-
-from iteradraw.shared.types import PathLike
 
 if TYPE_CHECKING:
     pass
@@ -24,7 +22,7 @@ Usage:
 
 @dataclass(frozen=True)
 class Folder:
-    path: PathLike
+    path: Path
     enabled: bool
 
 
@@ -37,16 +35,16 @@ class FolderSet:
     - Folders are always unique (no duplicates), keyed by folder path
     """
 
-    uuid: UUID
+    id: int
     display_name: str
-    folders: dict[str, Folder] = field(default_factory=dict)
+    folders: dict[Path, Folder] = field(default_factory=dict)
 
     class State(StrEnum):
         ENABLED = "enabled"
         PARTIAL = "partial"
         DISABLED = "disabled"
 
-    def add(self, path: str, enabled: bool = True) -> "FolderSet":
+    def add(self, path: Path, enabled: bool = True) -> "FolderSet":
         """Add a folder with optional enabled state."""
         if path in self.folders:
             return self
@@ -54,13 +52,13 @@ class FolderSet:
         new_data[path] = Folder(path=path, enabled=enabled)
         return replace(self, folders=new_data)
 
-    def remove(self, path: str) -> "FolderSet":
+    def remove(self, path: Path) -> "FolderSet":
         """Remove a folder."""
         new_data = self.folders.copy()
-        new_data.pop(path)
+        new_data.pop(path, None)
         return replace(self, folders=new_data)
 
-    def set_folder_enabled(self, path: str, enabled: bool) -> "FolderSet":
+    def set_folder_enabled(self, path: Path, enabled: bool) -> "FolderSet":
         """Enable a folder explicitly."""
         new_data = self.folders.copy()
         new_data[path] = replace(new_data[path], enabled=enabled)
