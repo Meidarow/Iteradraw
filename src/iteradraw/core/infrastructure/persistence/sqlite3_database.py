@@ -25,10 +25,22 @@ class SQLite3Database:
         self, app_config: ApplicationConfiguration
     ) -> None:
         self.db_path = app_config.db_path
-        self.connection = sqlite3.connect(self.db_path)
+        self.connection = None
+
+    def __enter__(self) -> SQLite3Database:
+        self.connection.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.connection.__exit__(exc_type, exc_val, exc_tb)
+
+    def open(self) -> None:
+        if not self.connection:
+            self.connection = sqlite3.connect(self.db_path)
 
     def close(self) -> None:
-        self.connection.close()
+        if self.connection:
+            self.connection.close()
 
     def commit(self) -> None:
         self.connection.commit()
