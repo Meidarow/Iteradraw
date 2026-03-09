@@ -1,195 +1,91 @@
-from uuid import UUID
+import sqlite3
+from pathlib import Path
 
-from iteradraw.core.domain.models.folder import FolderSet
-from iteradraw.core.infrastructure.persistence.sqlite3_database import (
-    SQLite3DomainDatabase,
-)
+from iteradraw.core.domain.exceptions import PersistenceError, CommitError
+from iteradraw.core.domain.models.folder import FolderSet, Folder
+from iteradraw.core.infrastructure.persistence.sqlite3_database import SQLite3Database
 from iteradraw.interfaces import FolderRepository
 
 
 class SQLFolderRepository(FolderRepository):
-    """
-    Repository for FolderSet domain objects.
-
-    Facilitates persistence operations for the FolderSet model by
-    abstracting backend implementations and providing (de-)serialization
-    methods. Allows for backend injection, as long as implementation follows
-    the Persistence protocol.
-
-    Handles only FolderSets since an individual Folder is not meant to exist
-    outside a folder set.
-    """
-
-    def __init__(self, persistence: SQLite3DomainDatabase):
-        self.persistence = persistence
-
-    def get(self, folderset_id: UUID) -> FolderSet:
-        folderset_id_str = str(folderset_id)
-        return self.persistence.get_folderset(folderset_id=folderset_id_str)
-
-    def get_all(self) -> list[FolderSet]:
-        return self.persistence.get_all_foldersets()
-
-    def save(self, folderset: FolderSet):
-        self.persistence.save_folderset(folderset=folderset)
-
-    def remove(self, folderset_id: UUID):
-        folderset_id_str = str(folderset_id)
-        self.persistence.delete_folderset(folderset_id=folderset_id_str)
 
     DB_SCHEMA = """
     CREATE TABLE IF NOT EXISTS foldersets (
         id INTEGER PRIMARY KEY,
         name TEXT NOT NULL
     );
-    CREATE TABLE IF NOT EXISTS rootfolders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        path TEXT UNIQUE NOT NULL,
-        enabled BOOLEAN DEFAULT 1,
-        folderset_id INT NOT NULL,
-        FOREIGN KEY(folderset_id) REFERENCES foldersets(id)
-        ON DELETE CASCADE,
-        FOREIGN KEY (id) REFERENCES discovered_folders(dir_id)
-    );
         
-    CREATE TABLE IF NOT EXISTS discovered_folders (
+    CREATE TABLE IF NOT EXISTS directories (
         dir_id INTEGER NOT NULL PRIMARY KEY,
         dir_name TEXT NOT NULL,
         crawl_time INT NOT NULL,
-        mod_time INT NOT NULL
+        mod_time INT NOT NULL, 
     );
+        
+    CREATE TABLE IF NOT EXISTS rootfolders (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        path TEXT NOT NULL,
+        enabled BOOLEAN DEFAULT 1,
+        folderset_id INT NOT NULL,
+        UNIQUE (path, folderset_id),
+        FOREIGN KEY(folderset_id) REFERENCES foldersets(id)
+        ON DELETE CASCADE,
+        FOREIGN KEY (id) REFERENCES directories(dir_id)
+    );
+        
     CREATE TABLE IF NOT EXISTS folders_closure (
         ancestor_id INT NOT NULL,
         descendant_id INT NOT NULL,
         depth INT NOT NULL,
         PRIMARY KEY (ancestor_id, descendant_id),
-        FOREIGN KEY (ancestor_id) REFERENCES discovered_folders(dir_id),
-        FOREIGN KEY (descendant_id) REFERENCES discovered_folders(dir_id)
+        FOREIGN KEY (ancestor_id) REFERENCES directories(dir_id),
+        FOREIGN KEY (descendant_id) REFERENCES directories(dir_id)
     );
     """
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.database:
-            try:
-                self.database.close()
-            finally:
-                self.database = None
-
     def __init__(
         self,
-        db_path: Optional[str] = None,
-        connection: Optional[sqlite3.Connection] = None,
+        database: SQLite3Database,
     ) -> None:
-        self.db_path = db_path
-        if db_path is None and connection is None:
-            raise ValueError(
-                "Must provide either db_path or an open sqlite3.Connection"
-            )
-        self.database = connection or sqlite3.connect(self.db_path)
-        self.database.row_factory = sqlite3.Row
-        self.setup_schema()
-        self._configure_connection()
+        self.database = database
 
     def initialize(self) -> None:
-        """Open the connection and ensure the schema exists."""
-        self.setup_schema()  # create table if it isn’t there
-
-    def clear_all(self) -> None:
-        """Drop all folder tables."""
-        query = """
-        DROP TABLE IF EXISTS folders;
-        DROP TABLE IF EXISTS foldersets;
-        """
-        with self.database:
-            self.database.executescript(query)
-
-    def setup_schema(self, db_schema: str | None = None) -> None:
-        """Create table with db_schema."""
-        query = db_schema or self.DB_SCHEMA
-        with self.database:
-            self.database.executescript(query)
-
-    def get_folderset(self, folderset_id: str) -> FolderSet:
-        """
-        Retrieves one FolderSet from the DB and reconstructs the aggregate.
-        """
-        fs_row = self._execute(
-            "SELECT name FROM foldersets WHERE id = ?", (folderset_id,)
-        ).fetchone()
-
-        if not fs_row:
-            raise ObjectNotFoundError(
-                f"No FolderSet found with UUID: {folderset_id}"
-            )
-        folder_rows = self._execute(
-            "SELECT path, enabled FROM folders WHERE folderset_id = ?",
-            (folderset_id,),
-        ).fetchall()
-
-        # noinspection PyArgumentList
-        return FolderSet(
-            uuid=uuid.UUID(folderset_id),
-            display_name=fs_row["name"],
-            folders={
-                row["path"]: Folder(row["path"], row["enabled"])
-                for row in folder_rows
-            },
-        )
+        """Configure database and ensure the schema exists."""
+        self.database.open()
+        self.database.execute("PRAGMA journal_mode = WAL;")
+        self.database.execute("PRAGMA synchronous = NORMAL;")
+        self.database.execute("PRAGMA temp_store = MEMORY;")
+        self.database.execute("PRAGMA foreign_keys = ON;")
+        self.database.executescript(self.DB_SCHEMA)
+        self.database.row_factory = sqlite3.Row
 
     def get_all_foldersets(self) -> list[FolderSet]:
         """
         Retrieves all FolderSets from the DB and reconstructs them.
         """
-
-        # 1. Get ALL data in one go
         query = """
-        SELECT
-            fs.id,
-            fs.name,
-            f.path,
-            f.enabled
-        FROM
-            foldersets fs
-        LEFT JOIN
-            folders f ON f.folderset_id = fs.id
-        ORDER BY
-            fs.id;
+        SELECT fs.id, fs.name, f.path, f.enabled FROM foldersets fs
+        LEFT JOIN rootfolders f ON f.folderset_id = fs.id ORDER BY fs.id;
         """
-
-        # This holds the in-progress foldersets: { "name": { "path": folder } }
         foldersets_map = {}
 
-        # 2. Loop through the flat results
-        # (Assuming your _execute.fetchall() returns dict-like rows)
-        for row in self._execute(query).fetchall():
-            folderset_id = row["id"]
-            folderset_name = row["name"]
-
-            # 3. Create the FolderSet if it's the first time we've seen it
-            if folderset_id not in foldersets_map:
-                foldersets_map[folderset_id] = {
-                    "name": folderset_name,
+        for row in self.database.execute(query).fetchall():
+            if row["id"] not in foldersets_map:
+                foldersets_map[row["id"]] = {
+                    "name": row["name"],
                     "folders": {},
                 }
+            if not row["path"]:
+                continue
+            foldersets_map[row["id"]]["folders"][Path(row["path"])] = Folder(
+                path=Path(row["path"]), enabled=row["enabled"]
+            )
 
-            # 4. Add the folder to its set
-            if row["path"]:
-                foldersets_map[folderset_id]["folders"][row["path"]] = Folder(
-                    path=row["path"], enabled=row["enabled"]
-                )
-
-        # noinspection PyArgumentList
-        return [
-            FolderSet(
-                uuid=uuid.UUID(folderset_id),
+        return [FolderSet(
+                id=folderset_id,
                 display_name=data["name"],
                 folders=data["folders"],
-            )
-            for folderset_id, data in foldersets_map.items()
-        ]
+            ) for folderset_id, data in foldersets_map.items()]
 
     def save_folderset(self, folderset: FolderSet):
         """
@@ -197,62 +93,113 @@ class SQLFolderRepository(FolderRepository):
         """
         try:
             with self.database:
-                cursor = self._execute(
-                    """
-                    INSERT INTO foldersets (id, name) VALUES (?, ?)
-                    ON CONFLICT(id) DO UPDATE SET name=excluded.name
-                    RETURNING id
-                    """,
-                    (folderset.uuid, folderset.display_name),
-                )
-                folderset_id = cursor.fetchone()["id"]
-
-                # Nuke old folders for this set (simple, effective)
-                self._execute(
-                    "DELETE FROM folders WHERE folderset_id = ?",
-                    (folderset_id,),
-                )
-
-                # Insert new folders
-                folder_data = [
-                    (f.path, f.enabled, folderset_id) for f in folderset.all
-                ]
-                if folder_data:  # executemany fails on empty list
-                    self.database.executemany(
-                        """
-                        INSERT INTO folders (path, enabled, folderset_id)
-                        VALUES (?, ?, ?)
-                        """,
-                        folder_data,
-                    )
+                self._upsert_foldersets(folderset)
+                root_folder_list = [str(folder) for folder in folderset.folders.keys()]
+                inserted_directory_id_list = self._insert_directories(root_folder_list)
+                self._insert_closure_nodes(inserted_directory_id_list)
+                folderset_data =[(str(f.path), f.enabled, folderset.id) for f in folderset.all]
+                self._insert_root_folders(folderset_data)
+                self._prune_root_folders(root_folder_list, folderset.id)
+                self._prune_directories()
         except sqlite3.DatabaseError as e:
             raise PersistenceError("Failed to save folderset") from e
 
-    def delete_folderset(self, folderset_id):
+    def register_folderset(self, folderset_name: str) -> int:
         try:
             with self.database:
-                self._execute(
+                cursor = self.database.execute(
+                    """
+                    INSERT INTO foldersets VALUES (?) RETURNING id;
+                    """,
+                    (folderset_name,),
+                )
+                return cursor.fetchone()["id"]
+        except sqlite3.DatabaseError as e:
+            raise PersistenceError("Failed to add folderset") from e
+
+    def delete_folderset(self, folderset_id: int) -> None:
+        try:
+            with self.database:
+                self.database.execute(
                     "DELETE FROM foldersets WHERE id = ?",
                     (folderset_id,),
                 )
+                self._prune_directories()
         except sqlite3.DatabaseError as e:
             raise PersistenceError("Failed to delete folderset") from e
 
-    def commit(self) -> None:
-        """Explicitly commit any pending transaction."""
-        try:
-            if self.database:
-                self.database.commit()
-                self.database.execute("PRAGMA wal_checkpoint(FULL);")
-        except sqlite3.DatabaseError as e:
-            raise CommitError("Failed to commit to database") from e
+    ### Crawl relevant
 
-    def _configure_connection(self):
-        self.database.execute("PRAGMA journal_mode = WAL;")
-        self.database.execute("PRAGMA synchronous = NORMAL;")
-        self.database.execute("PRAGMA temp_store = MEMORY;")
-        self.database.execute("PRAGMA foreign_keys = ON;")
+    def add_discovered_folder(self):
+        #todo
+        ...
 
-    def _execute(self, query: str, params: Any = ()) -> sqlite3.Cursor:
-        """Run a single statement with optional parameters."""
-        return self.database.execute(query, params)
+
+    def fetch_directories(self) -> list[Folder]:
+        query = """
+        SELECT dir_id from directories WHERE crawl_time < mod_time OR crawl_time = 0
+        """
+
+
+    # Private Helpers:
+
+
+    def _insert_directories(self, root_folders: list[str]) ->list[int]:
+        dir_id_list = []
+        if root_folders:
+            insert_folders_query = " ".join(
+                ["INSERT INTO directories (dir_name, crawl_time, mod_time) VALUES",
+                 ", ".join(["(?, 0, 0)" for _ in range(len(root_folders))]),
+                "ON CONFLICT (dir_name) DO UPDATE SET crawl_time = crawl_time RETURNING dir_id"]
+            )
+            rows = self.database.execute(insert_folders_query, root_folders).fetchall()
+            dir_id_list = [(directory_id["dir_id"]) for directory_id in rows]
+        return dir_id_list
+
+    def _prune_directories(self) -> None:
+        self.database.execute(
+            """
+            DELETE FROM directories WHERE dir_id NOT IN (
+            SELECT descendant_id FROM folders_closure WHERE ancestor_id IN (
+            SELECT id FROM rootfolders))
+            """
+        )
+
+    def _insert_closure_nodes(self, dir_id_list: list[int]) -> None:
+        if dir_id_list:
+            directory_data = [(directory_id, directory_id) for directory_id in dir_id_list]
+            self.database.executemany(
+                """
+                INSERT INTO folders_closure (ancestor_id, descendant_id, depth)
+                VALUES (?, ?, 0)
+                """,
+                directory_data)
+
+    def _upsert_foldersets(self, folderset: FolderSet) -> None:
+        self.database.execute(
+            """
+            INSERT INTO foldersets (id, name) VALUES (?, ?)
+            ON CONFLICT(id) DO UPDATE SET name=excluded.name
+            RETURNING id
+            """,
+            (folderset.id, folderset.display_name),
+        )
+
+    def _insert_root_folders(self, root_folder_data: list[tuple[str, bool, int]]) -> None:
+        if root_folder_data:
+            self.database.executemany(
+                """
+                INSERT INTO rootfolders (path, enabled, folderset_id)
+                VALUES (?, ?, ?)
+                ON CONFLICT (path, folderset_id) DO NOTHING
+                """,
+                root_folder_data,
+            )
+
+    def _prune_root_folders(self, root_folders: list[str], folderset_id: int) -> None:
+        params = [folderset_id , *root_folders]
+        self.database.execute(
+            " ".join([f"DELETE FROM rootfolders WHERE folderset_id = ? AND path NOT IN",
+            "(", ", ".join(["?" for _ in range(len(root_folders))]), ")"]),
+            params,
+        )
