@@ -5,6 +5,7 @@ from typing import (
 )
 
 from iteradraw.core.application.config import ApplicationConfiguration
+from iteradraw.core.domain.exceptions import PersistenceError, DatabaseConnectionError
 
 """
 This module includes the default database solution for Iteradraw.
@@ -37,22 +38,37 @@ class SQLite3Database:
     def open(self) -> None:
         if not self.connection:
             self.connection = sqlite3.connect(self.db_path)
+            self.connection.row_factory = sqlite3.Row
+            self.connection.execute("PRAGMA journal_mode = WAL;")
+            self.connection.execute("PRAGMA synchronous = NORMAL;")
+            self.connection.execute("PRAGMA temp_store = MEMORY;")
+            self.connection.execute("PRAGMA foreign_keys = ON;")
 
     def close(self) -> None:
         if self.connection:
             self.connection.close()
 
     def commit(self) -> None:
+        if not self.connection:
+            raise DatabaseConnectionError("Connection not open")
         self.connection.commit()
 
     def rollback(self) -> None:
+        if not self.connection:
+            raise DatabaseConnectionError("Connection not open")
         self.connection.rollback()
 
     def execute(self, query: str, params: Sequence[Any] = ()) -> sqlite3.Cursor:
+        if not self.connection:
+            raise DatabaseConnectionError("Connection not open")
         return self.connection.execute(query, params)
 
     def executemany(self, query: str, params: Sequence[Any] = ()) -> sqlite3.Cursor:
+        if not self.connection:
+            raise DatabaseConnectionError("Connection not open")
         return self.connection.executemany(query, params)
 
     def executescript(self, script: str) -> sqlite3.Cursor:
+        if not self.connection:
+            raise DatabaseConnectionError("Connection not open")
         return self.connection.executescript(script)
