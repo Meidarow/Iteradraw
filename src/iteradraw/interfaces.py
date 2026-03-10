@@ -1,5 +1,6 @@
 from abc import ABC
 from os import PathLike
+from pathlib import Path
 from typing import runtime_checkable, Protocol, Iterator, Iterable, Any, Type, TypeVar, Generic
 from uuid import UUID
 
@@ -55,32 +56,47 @@ class FolderRepository(Protocol):
     """
     Repository for FolderSet domain objects.
     """
-    def get(self, folderset_id: int) -> FolderSet:
+    def get_foldersets(self) -> list[FolderSet]:
         ...
 
-    def register_folderset(self, folderset_name: str) -> int:
+    def update_folderset(self, folderset: FolderSet):
         ...
 
-    def get_all(self) -> list[FolderSet]:
+    def add_folderset(self, folderset_name: str) -> int:
         ...
 
-    def save(self, folderset: FolderSet):
-        ...
-
-    def remove(self, folderset_id: int):
+    def delete_folderset(self, folderset_id: int) -> None:
         ...
 
 
+class DirectoryRepository(Protocol):
+    """
+    Repository for directories for filesystem operations.
+    """
+    def add_discovered_folder(self, dir_name: str, parent_id, crawl_time: int, mod_time: int) -> None:
+        ...
+
+    def get_stale_directories(self) -> list[tuple[int, str]]:
+        ...
+
+    def get_normalized_path(self, dir_id: int) -> Path:
+        ...
+
+    def update_dir(self, dir_id: int, crawl_time: int, mod_time: int) -> None:
+        ...
+
+
+class ImageRepository(Protocol):
+    """Repository of images"""
+    def insert_image_batch(self, batch: Iterable[Any]) -> None:
+        ...
+
+    def clear_images_under_parent(self, parent_id: int) -> None:
+        ...
 
 class SessionRepository(Protocol):
     """Abstract interface for database backends used in Draw-This."""
-
-    def initialize(self) -> None:
-        """Establish a connection and prepare for access."""
-
-    def setup_schema(self) -> None:
-        """Initialize database schema if not already created."""
-
+    raise NotImplementedError
 
 class PreferencesPersistence(Protocol):
     """
