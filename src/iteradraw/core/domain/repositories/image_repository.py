@@ -1,47 +1,23 @@
-from typing import Callable
+from typing import Iterable, Any
 
-from iteradraw.core.domain.models.timer import TimerSet
+from iteradraw.interfaces import ImageRepository
 
 
-class TimerRepository:
-    """
-    Repository for TimerSet domain objects.
-
-    Facilitates persistence operations for the TimerSet model by
-    abstracting backend implementations and providing (de-)serialization
-    methods. Allows for backend injection, as long as implementation
-    follows the Persistence protocol.
-    """
-
-    DB_SCHEMA = """
-    CREATE TABLE IF NOT EXISTS images (
-        image_id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL,
-        parent_dir INTEGER NOT NULL,
-        FOREIGN KEY (parent_dir) REFERENCES discovered_folders(dir_id)
-        ON DELETE CASCADE
-    );
-    """
+class SQLImageRepository(ImageRepository):
 
     def __init__(
-        self, persistence: Persistence, platform_config_dir: Callable
+        self, database
     ):
-        self.persistence = persistence or JsonPersistence(
-            namespace=RepositoryNamespaces.Timers,
-            file_name="session.json",
-            settings_dir_path=platform_config_dir(),
-            on_read_error=None,
-            on_write_error=None,
-        )
+        self.database = database
 
-    def get_all(self) -> list[TimerSet]: ...
+    def insert_image_batch(self, batch: Iterable[Any]) -> None:
+        query = """
+        INSERT INTO images (name, parent_id) VALUES (?, ?)
+        """
+        self.database.executemany(query, batch)
 
-    def save(self, data: list[TimerSet]): ...
-
-    @staticmethod
-    def _from_list(timers: list[int]) -> TimerSet:
-        """Factory for TimerSet from list of timers"""
-        ts = TimerSet()
-        for timer in timers:
-            ts.add(timer)
-        return ts
+    def clear_images_under_parent(self, parent_id: int) -> None:
+        query = """
+        DELETE FROM images WHERE parent_id = ?
+        """
+        self.database.execute(query, (parent_id,))
