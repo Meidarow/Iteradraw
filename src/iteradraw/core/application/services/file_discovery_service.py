@@ -1,14 +1,13 @@
-import threading
 import logging
-from os import PathLike
-from typing import (
-    Iterable,
-    Generator,
-    Any,
-)
+import os
+import random
+import time
+from os import DirEntry
+from pathlib import Path
+from typing import Generator
 
-from iteradraw.core.domain.models.image import ImageRow
-from iteradraw.core.infrastructure import Crawler
+from iteradraw.core.domain.repositories.image_repository import ImageRepository
+from iteradraw.interfaces import DirectoryRepository
 
 """
 
@@ -18,125 +17,111 @@ logger = logging.getLogger(__name__)
 
 class FileDiscoveryService:
     """
-    Orchestrates database operations and provides API to add and remove rows,
-    mark files as seen for resources persistence and randomize the database.
-
-    Handles:
-      - Batching paths before insert
-      - Committing batches with file metadata (folder, mtime, random ID)
-      TODO Add filtering by file type
-
-    Notes:
-        -This class is meant to handle ImageRow objects, the canonical
-         dataclass for the database layer of Draw-This.
-        -This class defaults to the SQLite 3 backend implementation, however it
-         is database agnostic. You may extend it by implementing a new
-         database according to the abstract class DatabaseBackend.
+    system
     """
+
+    class _Crawler:
+        """
+        Walks directories recursively and yields DirEntry objects.
+        Guarantees:
+        - Duplicate safe (Visited set)
+        - Recursion safe (symlinks handled)
+        - Skips inaccessible files gracefully
+
+        Notes:
+            -Converts DirEntryLike objects into static FileEntry objects
+            -Use as a context manager for automatic cleanup, or manage cleanup
+             manually via clear_queue() / reset_state() for long-lived crawlers.
+        """
+
+        def __init__(self):
+            self.files_skipped = 0
+
+        def crawl(self, folder: str) -> Generator[DirEntry]:
+            """Yield os.DirEntry objects for every file found in folders."""
+            try:
+                for entry in os.scandir(folder):
+                    if entry.is_symlink():
+                        continue
+                    yield entry
+            except (
+                    PermissionError,
+                    FileNotFoundError,
+                    NotADirectoryError,
+            ):
+                self.files_skipped += 1
+                logger.debug(
+                    f"Skipped {folder}", exc_info=True
+                )
 
     def __init__(
         self,
-        batch_size=None,
-        repo=None,
-        crawler=None,
+        dir_repo: DirectoryRepository,
+        image_repo: ImageRepository
     ):
-        self.repo = repo
-        self.crawler_class = crawler or Crawler
-        self.batch_size = batch_size or 5000
+        self._fresh_dirs = set()
+        self._stale_dirs = set()
+        self.dir_repo = dir_repo
+        self.image_repo = image_repo
+        self.crawler = self._Crawler()
 
-        self.loading_block: list[str] = []
-        self.file_count = 0
-        self._lock = threading.RLock()
-        self._is_closed = False
+    def scan_stale_directories(self):
+        self._populate_directories()
+        batch = []
+        while self._stale_dirs:
+            stale_dir_id, stale_dir_path = self._stale_dirs.pop()
+            generator = self.crawler.crawl(stale_dir_path)
+            crawl_time = int(time.time())
+            mod_time = int(os.stat(stale_dir_path).st_mtime)
+            self.dir_repo.update_dir(
+                dir_id=stale_dir_id,
+                crawl_time=crawl_time,
+                mod_time=mod_time,
+            )
+            for entry in generator:
+                if entry.is_dir() and entry.path not in self._fresh_dirs:
+                    dir_id = self.dir_repo.add_discovered_folder(
+                        dir_name=entry.name,
+                        crawl_time=0,
+                        mod_time=0,
+                        parent_id=stale_dir_id
+                    )
+                    self._stale_dirs.add((dir_id, entry.path))
+                    self._fresh_dirs.add(entry.path)
+                else:
+                    row = (entry.name, stale_dir_id)
+                    batch.append(row)
+                    # if len(batch) == 5000:
+                    #     random.shuffle(batch)
+                    #     self.image_repo.insert_image_batch(batch)
+                    #     batch.clear()
+        random.shuffle(batch)
+        self.image_repo.insert_image_batch(batch)
+        self._fresh_dirs.clear()
 
-    def add_rows(self, folders: Iterable[PathLike]) -> None:
-        """
-        Add rows into the database additively.
+# Private Helpers
 
-        This method accepts a folders iterable and adds them to the
-        existing database. It serves to avoid re-crawling folders that had
-        already been selected previously.
+    def _populate_directories(self) -> None:
+        root_map, dir_edges = self.dir_repo.get_all_directories()
+        for root in root_map.items():
+            root_id, root_path = root
+            self._sort_directory_by_status(root_id, root_path, dir_edges)
+            self._connect_descendants(root_id, root_path, dir_edges)
 
-        Args:
-            folders: Iterable of folders to be added
-        """
-        if not folders:
-            return
+    def _connect_descendants(self, root_id: int, path_to_root: str, edges: dict) -> None:
+        dirs = [(edges[root_id], path_to_root)]
+        while dirs:
+            dir_data, path_to_ancestor = dirs.pop()
+            for child in dir_data["children"]:
+                path_to_child = str(Path(path_to_ancestor).joinpath(edges[child]["dir_name"]))
+                self._sort_directory_by_status(child, path_to_child, edges)
+                dirs.append((edges[child], path_to_child))
 
-        with self.crawler_class() as crawler:
-            for folder in folders:
-                inserted = 0
-                rows = self.generate_rows(folder, crawler)
-                batches = self.generator_of_batches(rows, self.batch_size)
-                for batch in batches:
-                    inserted += self.backend.insert_rows(batch)
-                logger.debug(
-                    f"""
-                    Crawl done: from folder {folder} {inserted} rows were inserted.
-                    """
-                )
-        self.backend.commit()
-
-    @staticmethod
-    def generate_rows(folder, crawler) -> Generator[ImageRow, Any, None]:
-        for file_entry in crawler.crawl(folders=folder):
-            yield ImageRow.from_file_entry(file_entry)
-
-    @staticmethod
-    def generator_of_batches(
-        rows: Generator[ImageRow, None, None], batch_size: int
-    ) -> Generator[Generator[ImageRow, None, None], None, None]:
-        """
-        Yield generators of up to batch_size rows.
-        Each batch is itself a generator, not a list.
-        """
-
-        def make_batch(
-            initial_row: ImageRow,
-            remaining_rows: Generator[ImageRow, None, None],
-        ):
-            """Yield first_row + up to batch_size-1 from remaining_rows"""
-            count = 0
-            yield initial_row
-            count += 1
-            for row in remaining_rows:
-                yield row
-                count += 1
-                if count >= batch_size:
-                    break
-
-        # Materialize the rows_generator as an iterator
-        rows_iter = iter(rows)
-        while True:
-            try:
-                first_row = next(rows_iter)
-            except StopIteration:
-                break
-            # Yields mini generators of size: batch_size
-            yield make_batch(first_row, rows_iter)
-
-    def remove_rows(self, folders: Iterable[PathLike]):
-        """
-        Remove rows of paths under given directory from database
-
-        This method removes all rows with paths under the provided parent
-        directories.
-
-        Args:
-            parent_folders list[str]: Parent directories to be removed
-        """
-        self.backend.remove_rows(folders)
-
-    #
-    # def update_seen(self, folders: Iterable[PathLike]):
-    #     # TODO to be implemented once async loading is possible
-    #     self.backend.mark_seen(folders)
-    #
-    # def load_all_rows(self):
-    #     """
-    #     Return all database entries.
-    #
-    #     Legacy Loader soluction simply adapted into the new framework.
-    #     TODO remove once async loader has been implemented
-    #     """
-    #     return self.backend.load_whole_database()
+    def _sort_directory_by_status(self, dir_id: int, path: str, edges: dict) -> None:
+        entry = edges[dir_id]
+        crawl_time = entry["crawl_time"]
+        mod_time = entry["mod_time"]
+        if crawl_time < mod_time or crawl_time == 0:
+            self._stale_dirs.add((dir_id,path))
+        else:
+            self._fresh_dirs.add(path)
