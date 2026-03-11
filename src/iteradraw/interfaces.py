@@ -73,10 +73,10 @@ class DirectoryRepository(Protocol):
     """
     Repository for directories for filesystem operations.
     """
-    def add_discovered_folder(self, dir_name: str, parent_id, crawl_time: int, mod_time: int) -> None:
+    def add_discovered_folder(self, dir_name: str, parent_id, crawl_time: int, mod_time: int) -> int:
         ...
 
-    def get_stale_directories(self) -> list[tuple[int, str]]:
+    def get_all_directories(self) -> tuple[dict[int,str], dict[int,dict[str, str|int|set[int]]]]:
         ...
 
     def get_normalized_path(self, dir_id: int) -> Path:

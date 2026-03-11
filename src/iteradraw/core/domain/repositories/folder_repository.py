@@ -159,16 +159,31 @@ class SQLDirectoryRepository(DirectoryRepository):
     ) -> None:
         self.database = database
 
-    def add_discovered_folder(self, dir_name: str, parent_id, crawl_time: int, mod_time: int) -> None:
+    def add_discovered_folder(self, dir_name: str, parent_id, crawl_time: int, mod_time: int) -> int:
         new_dir_id = self._add_directory_node(dir_name, crawl_time, mod_time)
         self._add_closure_edges(parent_id, new_dir_id)
+        return new_dir_id
 
-    def get_stale_directories(self) -> list[tuple[int, str]]:
+    def get_all_directories(self) ->tuple[dict[int,str], dict[int,dict[str, str|int|set[int]]]]:
         query = """ 
-        SELECT dir_id, dir_name from directories 
-        WHERE crawl_time < mod_time OR crawl_time = 0
+        SELECT c.descendant_id,d.dir_id, d.dir_name, d.crawl_time, d.mod_time from directories d
+        INNER JOIN folders_closure c ON d.dir_id = c.ancestor_id WHERE c.depth = 1 OR 
+            (c.depth = 0 AND dir_id IN (SELECT dir_id FROM rootfolders))
         """
-        return [(directory["dir_id"], directory["name"]) for directory in self.database.execute(query).fetchall()]
+        root_map = {}
+        edges = {}
+        for directory in self.database.execute(query).fetchall():
+            edges.setdefault(directory["dir_id"],{
+                "dir_name": directory["dir_name"],
+                "crawl_time": directory["crawl_time"],
+                "mod_time": directory["mod_time"],
+                "children": set(),
+            })
+            if directory["dir_id"] != directory["descendant_id"]:
+                edges[directory["dir_id"]]["children"].add(directory["descendant_id"])
+            else:
+                root_map[directory["dir_id"]] = directory["dir_name"]
+        return root_map, edges
 
     def get_normalized_path(self, dir_id: int) -> Path:
         query = """ 
