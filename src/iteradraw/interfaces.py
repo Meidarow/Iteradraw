@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from os import PathLike
 from pathlib import Path
 from typing import runtime_checkable, Protocol, Iterator, Iterable, Any, Type, TypeVar, Generic
@@ -7,9 +7,11 @@ from uuid import UUID
 from iteradraw.core.domain.models.folder import FolderSet
 
 
-class Command(Protocol):
+class Event(ABC):
     ...
 
+class Command(ABC):
+    ...
 
 TCommand = TypeVar("TCommand", bound="Command")
 
@@ -17,19 +19,6 @@ class CommandHandler(ABC, Generic[TCommand]):
     command_type : Type[TCommand]
     def handle(self, command: TCommand):
         ...
-
-class Event(Protocol):
-    ...
-
-class ICache(ABC):
-    def get(self): ...
-    def put(self): ...
-
-@runtime_checkable
-class DirectoryScanner(Protocol):
-    def __call__(self, directory: PathLike) -> Iterator[Any]:
-        ...
-
 
 """
 Interface protocols for the persistence layer of Iteradraw.
@@ -52,67 +41,71 @@ Usage:
 """
 
 
-class FolderRepository(Protocol):
+class FolderRepository(ABC):
     """
     Repository for FolderSet domain objects.
     """
+    @abstractmethod
     def get_foldersets(self) -> list[FolderSet]:
         ...
 
-    def update_folderset(self, folderset: FolderSet):
+    @abstractmethod
+    def update_folderset_name(self, folderset: FolderSet) -> None:
         ...
 
-    def add_folderset(self, folderset_name: str) -> int:
+    @abstractmethod
+    def update_folderset_folders(self, folderset: FolderSet) -> None:
         ...
 
+    @abstractmethod
+    def create_folderset(self, folderset_name: str) -> int:
+        ...
+
+    @abstractmethod
     def delete_folderset(self, folderset_id: int) -> None:
         ...
 
-
-class DirectoryRepository(Protocol):
+class DirectoryRepository(ABC):
     """
     Repository for directories for filesystem operations.
     """
-    def add_discovered_folder(self, dir_name: str, parent_id, crawl_time: int, mod_time: int) -> int:
+    @abstractmethod
+    def create_directory(self, dir_name: str, parent_id: int,
+                         crawl_time: int, mod_time: int) -> int:
         ...
 
-    def get_all_directories(self) -> tuple[dict[int,str], dict[int,dict[str, str|int|set[int]]]]:
+    @abstractmethod
+    def get_directories(self) -> dict[int, dict[str, str | int | set | bool]]:
         ...
 
+    @abstractmethod
     def get_normalized_path(self, dir_id: int) -> Path:
         ...
 
-    def update_dir(self, dir_id: int, crawl_time: int, mod_time: int) -> None:
+    @abstractmethod
+    def update_directory(self, dir_id: int, crawl_time: int = 0,
+                         mod_time: int = 0) -> None:
+        ...
+
+    @abstractmethod
+    def create_directories(self, dirs: list[Path]) -> list[int]:
+        ...
+
+    @abstractmethod
+    def is_duplicate(self, dir_path: Path) -> int | None:
         ...
 
 
-class ImageRepository(Protocol):
+class ImageRepository(ABC):
     """Repository of images"""
+    @abstractmethod
     def insert_image_batch(self, batch: Iterable[Any]) -> None:
         ...
 
+    @abstractmethod
     def clear_images_under_parent(self, parent_id: int) -> None:
         ...
 
-class SessionRepository(Protocol):
+class SessionRepository(ABC):
     """Abstract interface for database backends used in Draw-This."""
-    raise NotImplementedError
-
-class PreferencesPersistence(Protocol):
-    """
-    Persistence protocol for domain objects, intended for user-preferences
-    and content.
-
-    Defines API that must be public in concrete implementations for
-    hot-swappale backends to properly be consumed by the repository layer.
-    """
-
-    def read_file(self):
-        """
-        Decodes file
-        """
-
-    def write_file(self, namespace):
-        """
-        Encodes file
-        """
+    ...
