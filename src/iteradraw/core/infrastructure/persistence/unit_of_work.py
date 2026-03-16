@@ -16,7 +16,7 @@ class SQLite3UnitOfWorkFactory(UnitOfWorkFactory):
         self.folder_repo = SQLite3FolderRepository
         self.db = SQLite3Database
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self) -> SQLite3UnitOfWork:
         database = self.db(self.config)
         return SQLite3UnitOfWork(
             database=database,
@@ -35,16 +35,16 @@ class SQLite3UnitOfWork(UnitOfWork):
         self.folder_repo = folder_repo
         self.database = database
 
-    def __enter__(self):
+    def __enter__(self) -> SQLite3UnitOfWork:
         self.database.open()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self.rollback()
         self.database.close()
 
-    def commit(self):
+    def commit(self) -> None:
         self.database.commit()
 
-    def rollback(self):
+    def rollback(self) -> None:
         self.database.rollback()
