@@ -26,21 +26,24 @@ from iteradraw.core.application.commands.folder_commands import (
 from iteradraw.core.domain.events.folder_events import FolderSetRenamed, FolderRemoved, FolderAdded, FolderSetAdded, \
     FolderSetRemoved, FolderEnabledSet, AllFoldersEnabledSet, FolderMovedBetweenFolderSets
 from iteradraw.core.infrastructure.buses.event_bus import EventBus
-from iteradraw.interfaces import CommandHandler
-from iteradraw.core.domain.models.folder import FolderSet
-from iteradraw.core.domain.repositories.folder_repository import FolderRepository
+from iteradraw.interfaces import CommandHandler, UnitOfWorkFactory
 
 
 class AddFolderCommandHandler(CommandHandler[AddFolderCommand]):
     command_type = AddFolderCommand
-    def __init__(self, folder_repo: FolderRepository, event_bus: EventBus):
-        self.folder_repo = folder_repo
+    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
+        self.uow_factory = uow_factory
         self.event_bus = event_bus
 
     def handle(self, command: AddFolderCommand):
-        old_folderset = self.folder_repo.get(command.folderset_id)
-        new_folderset = old_folderset.add(command.folder_path, command.enabled)
-        self.folder_repo.save(folderset=new_folderset)
+        with self.uow_factory() as uow:
+            folderset = uow.folder_repo.get_folderset(
+                folderset_id=command.folderset_id
+            )
+            folderset = folderset.add(command.folder_path, command.enabled)
+            uow.folder_repo.update_folderset_folders(folderset=folderset)
+            uow.commit()
+
         evt = FolderAdded(
             folderset_id=command.folderset_id,
             folder_path=command.folder_path,
@@ -51,83 +54,95 @@ class AddFolderCommandHandler(CommandHandler[AddFolderCommand]):
 
 class RemoveFolderCommandHandler(CommandHandler[RemoveFolderCommand]):
     command_type = RemoveFolderCommand
-    def __init__(self, folder_repo: FolderRepository, event_bus: EventBus):
-        self.folder_repo = folder_repo
+    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
+        self.uow_factory = uow_factory
         self.event_bus = event_bus
 
     def handle(self, command: RemoveFolderCommand):
-        old_folderset = self.folder_repo.get(command.folderset_id)
-        new_folderset = old_folderset.remove(command.folder_path)
-        self.folder_repo.save(folderset=new_folderset)
+        with self.uow_factory() as uow:
+            folderset = uow.folder_repo.get_folderset(command.folderset_id)
+            folderset = folderset.remove(command.folder_path)
+            uow.folder_repo.update_folderset_folders(folderset=folderset)
+            uow.commit()
+
         evt = FolderRemoved(
-            folderset_id=command.folderset_id, folder_path=command.folder_path
+            folderset_id=command.folderset_id,
+            folder_path=command.folder_path
         )
         self.event_bus.publish(evt)
 
 class RenameFolderSetCommandHandler(CommandHandler[RenameFolderSetCommand]):
     command_type = RenameFolderSetCommand
-    def __init__(
-        self,
-        folder_repo: FolderRepository,
-        event_bus: EventBus,
-    ):
-        self.folder_repo = folder_repo
+    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
+        self.uow_factory = uow_factory
         self.event_bus = event_bus
 
     def handle(self, command: RenameFolderSetCommand):
-        old_folderset = self.folder_repo.get(command.folderset_id)
-        new_folderset = old_folderset.rename(command.new_name)
-        self.folder_repo.save(folderset=new_folderset)
+        with self.uow_factory() as uow:
+            folderset = uow.folder_repo.get_folderset(command.folderset_id)
+            folderset = folderset.rename(command.new_name)
+            uow.folder_repo.update_folderset_name(folderset=folderset)
+            uow.commit()
+
         evt = FolderSetRenamed(
-            folderset_id=command.folderset_id, new_name=command.new_name
+            folderset_id=command.folderset_id,
+            new_name=command.new_name
         )
         self.event_bus.publish(evt)
 
 
 class AddFolderSetCommandHandler(CommandHandler[AddFolderSetCommand]):
     command_type = AddFolderSetCommand
-    def __init__(
-        self,
-        folder_repo: FolderRepository,
-        event_bus: EventBus,
-    ):
-        self.folder_repo = folder_repo
+    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
+        self.uow_factory = uow_factory
         self.event_bus = event_bus
 
     def handle(self, command: AddFolderSetCommand):
-        new_folderset_id = self.folder_repo.register_folderset(command.display_name)
-        new_folderset = FolderSet(
-            id=new_folderset_id, display_name=command.display_name
+        with self.uow_factory() as uow:
+            folderset_id = uow.folder_repo.create_folderset(
+                folderset_name=command.display_name
+            )
+            uow.commit()
+
+        evt = FolderSetAdded(
+            folderset_id=folderset_id
         )
-        self.folder_repo.save(folderset=new_folderset)
-        evt = FolderSetAdded(folderset=new_folderset)
         self.event_bus.publish(evt)
 
 
 class DeleteFolderSetCommandHandler(CommandHandler[DeleteFolderSetCommand]):
     command_type = DeleteFolderSetCommand
-    def __init__(self, folder_repo: FolderRepository, event_bus: EventBus):
-        self.folder_repo = folder_repo
+    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
+        self.uow_factory = uow_factory
         self.event_bus = event_bus
 
     def handle(self, command: DeleteFolderSetCommand):
-        self.folder_repo.remove(folderset_id=command.folderset_id)
-        evt = FolderSetRemoved(folderset_id=command.folderset_id)
+        with self.uow_factory() as uow:
+            uow.folder_repo.delete_folderset(folderset_id=command.folderset_id)
+            uow.commit()
+
+        evt = FolderSetRemoved(
+            folderset_id=command.folderset_id
+        )
         self.event_bus.publish(evt)
 
 
 class SetFolderEnabledCommandHandler(CommandHandler[SetFolderEnabledCommand]):
     command_type = SetFolderEnabledCommand
-    def __init__(self, folder_repo: FolderRepository, event_bus: EventBus):
-        self.folder_repo = folder_repo
+    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
+        self.uow_factory = uow_factory
         self.event_bus = event_bus
 
     def handle(self, command: SetFolderEnabledCommand):
-        folderset = self.folder_repo.get(command.folderset_id)
-        new_folderset = folderset.set_folder_enabled(
-            path=command.folder_path, enabled=command.target_enabled
-        )
-        self.folder_repo.save(folderset=new_folderset)
+        with self.uow_factory() as uow:
+            folderset = uow.folder_repo.get_folderset(command.folderset_id)
+            folderset = folderset.set_folder_enabled(
+                path=command.folder_path,
+                enabled=command.target_enabled
+            )
+            uow.folder_repo.update_folderset_folders(folderset=folderset)
+            uow.commit()
+
         evt = FolderEnabledSet(
             folderset_id=command.folderset_id,
             folder_path=command.folder_path,
@@ -138,48 +153,63 @@ class SetFolderEnabledCommandHandler(CommandHandler[SetFolderEnabledCommand]):
 
 class SetAllFoldersEnabledCommandHandler(CommandHandler[SetAllFoldersEnabledCommand]):
     command_type = SetAllFoldersEnabledCommand
-    def __init__(self, folder_repo: FolderRepository, event_bus: EventBus):
-        self.folder_repo = folder_repo
+    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
+        self.uow_factory = uow_factory
         self.event_bus = event_bus
 
     def handle(self, command: SetAllFoldersEnabledCommand):
-        folderset = self.folder_repo.get(command.folderset_id)
-        new_folderset = folderset.set_all_folders_enabled(
-            enabled=command.target_enabled
-        )
-        self.folder_repo.save(folderset=new_folderset)
+        with self.uow_factory() as uow:
+            folderset = uow.folder_repo.get_folderset(command.folderset_id)
+            new_folderset = folderset.set_all_folders_enabled(
+                enabled=command.target_enabled
+            )
+            uow.folder_repo.update_folderset_folders(folderset=new_folderset)
+            uow.commit()
+
         evt = AllFoldersEnabledSet(
-            folderset_id=command.folderset_id, enabled=command.target_enabled
+            folderset_id=command.folderset_id,
+            enabled=command.target_enabled
         )
         self.event_bus.publish(evt)
 
 
 class MoveFolderBetweenFolderSetsCommandHandler(CommandHandler[MoveFolderBetweenFolderSetsCommand]):
-    command_type = MoveFolderBetweenFolderSetsCommand
     """
     TODO Planned feature. Not integrated in GUI.
     This handler is already integrated into the DI container.
     Careful here, this requires changing both foldersets AFTER verifying if
     the target FS can receive the folder, that is, doesn't already have it.
-    """
 
-    def __init__(self, folder_repo: FolderRepository, event_bus: EventBus):
-        self.folder_repo = folder_repo
+    Currently, in the case that the destination FS has already the transferred
+    folder, it simply updates its enabled status to match what the folder had in
+    the origin FS.
+
+    Raises:
+        KeyError: If origin folderset does not contain the folder being
+        transferred.
+    """
+    command_type = MoveFolderBetweenFolderSetsCommand
+
+    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
+        self.uow_factory = uow_factory
         self.event_bus = event_bus
 
     def handle(self, command: MoveFolderBetweenFolderSetsCommand):
-        origin = self.folder_repo.get(command.origin_folderset_id)
-        destination = self.folder_repo.get(command.destination_folderset_id)
+        with self.uow_factory() as uow:
+            origin = uow.folder_repo.get_folderset(command.origin_folderset_id)
+            destination = uow.folder_repo.get_folderset(command.destination_folderset_id)
 
-        folder = origin.folders.get(command.folder_path)
-        if not folder or folder.path in destination.folders.keys():
-            return
+            folder = origin.folders.get(command.folder_path, None)
+            if folder is None:
+                raise KeyError("Folder not in origin FolderSet")
 
-        new_origin = origin.remove(command.folder_path)
-        new_destination = destination.add(folder.path, folder.enabled)
+            origin = origin.remove(command.folder_path)
+            destination = destination.add(folder.path, folder.enabled)
 
-        self.folder_repo.save(new_origin)
-        self.folder_repo.save(new_destination)
+            uow.folder_repo.update_folderset_folders(origin)
+            uow.folder_repo.update_folderset_folders(destination)
+            uow.commit()
+
         evt = FolderMovedBetweenFolderSets(
             origin_folderset_id=command.origin_folderset_id,
             destination_folderset_id=command.destination_folderset_id,
