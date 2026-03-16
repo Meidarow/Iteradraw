@@ -45,6 +45,11 @@ class FolderRepository(ABC):
     """
     Repository for FolderSet domain objects.
     """
+
+    @abstractmethod
+    def get_folderset(self, folderset_id: int) -> FolderSet:
+        ...
+
     @abstractmethod
     def get_foldersets(self) -> list[FolderSet]:
         ...

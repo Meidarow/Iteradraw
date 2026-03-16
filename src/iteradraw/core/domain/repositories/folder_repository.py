@@ -24,6 +24,45 @@ class SQLite3FolderRepository(FolderRepository):
     ) -> None:
         self.database = database
 
+    def get_folderset(self, folderset_id: int) -> FolderSet:
+        """
+        Retrieves specific FolderSet data from the database and returns
+        FolderSet object.
+
+        Args:
+            folderset_id (int): Unique id of the folderset.
+        """
+        query = """
+        SELECT fs.id, fs.name, f.path, f.enabled FROM foldersets fs
+        LEFT JOIN rootfolders f ON f.folderset_id = fs.id WHERE fs.id = ?;
+        """
+
+        rows = self.database.execute(query,(folderset_id,),).fetchall()
+        if not rows:
+            raise PersistenceError(
+                f"Folderset with ID: {folderset_id} not found"
+            )
+
+        folderset = {}
+        for row in rows:
+            folderset.setdefault("name", row["name"])
+            folderset.setdefault("folders", {})
+
+            if not row["path"]:
+                continue
+            folderset["folders"].setdefault(
+                Path(row["path"]),
+                Folder(
+                    path=Path(row["path"]),
+                    enabled=row["enabled"]
+            ))
+
+        return FolderSet(
+                id=folderset_id,
+                display_name=folderset["name"],
+                folders=folderset["folders"],
+            )
+
     def get_foldersets(self) -> list[FolderSet]:
         """
         Retrieves all FolderSet data from the database and returns FolderSet
@@ -33,25 +72,31 @@ class SQLite3FolderRepository(FolderRepository):
         SELECT fs.id, fs.name, f.path, f.enabled FROM foldersets fs
         LEFT JOIN rootfolders f ON f.folderset_id = fs.id ORDER BY fs.id;
         """
-        foldersets_map = {}
 
-        for row in self.database.execute(query).fetchall():
-            foldersets_map.setdefault(row["id"], {
+        rows = self.database.execute(query).fetchall()
+        if not rows:
+            return []
+
+        foldersets = {}
+        for row in rows:
+            foldersets.setdefault(row["id"], {
                 "name": row["name"],
                 "folders": {},
             })
             if not row["path"]:
                 continue
-            foldersets_map[row["id"]]["folders"][Path(row["path"])] = Folder(
-                path=Path(row["path"]),
-                enabled=row["enabled"]
-            )
+            foldersets[row["id"]]["folders"].setdefault(
+                Path(row["path"]),
+                Folder(
+                    path=Path(row["path"]),
+                    enabled=row["enabled"]
+            ))
 
         return [FolderSet(
                 id=folderset_id,
                 display_name=data["name"],
                 folders=data["folders"],
-            ) for folderset_id, data in foldersets_map.items()]
+            ) for folderset_id, data in foldersets.items()]
 
     def create_folderset(self, folderset_name: str) -> int:
         """
