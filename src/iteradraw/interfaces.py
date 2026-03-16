@@ -109,3 +109,25 @@ class ImageRepository(ABC):
 class SessionRepository(ABC):
     """Abstract interface for database backends used in Draw-This."""
     ...
+
+class UnitOfWorkFactory(ABC):
+    @abstractmethod
+    def __call__(self):
+        ...
+
+class UnitOfWork(ABC):
+    @abstractmethod
+    def __enter__(self):
+        ...
+
+    @abstractmethod
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        ...
+
+    @abstractmethod
+    def commit(self):
+        ...
+
+    @abstractmethod
+    def rollback(self):
+        ...

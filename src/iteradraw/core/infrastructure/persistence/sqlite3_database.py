@@ -5,7 +5,7 @@ from typing import (
 )
 
 from iteradraw.core.application.config import ApplicationConfiguration
-from iteradraw.core.domain.exceptions import PersistenceError, DatabaseConnectionError
+from iteradraw.core.domain.exceptions import DatabaseConnectionError
 
 """
 This module includes the default database solution for Iteradraw.
@@ -37,12 +37,16 @@ class SQLite3Database:
 
     def open(self) -> None:
         if not self.connection:
-            self.connection = sqlite3.connect(self.db_path)
+            self.connection = sqlite3.connect(self.db_path, autocommit=False)
             self.connection.row_factory = sqlite3.Row
-            self.connection.execute("PRAGMA journal_mode = WAL;")
-            self.connection.execute("PRAGMA synchronous = NORMAL;")
-            self.connection.execute("PRAGMA temp_store = MEMORY;")
-            self.connection.execute("PRAGMA foreign_keys = ON;")
+            script = """
+            COMMIT;
+            PRAGMA journal_mode = WAL;
+            PRAGMA synchronous = NORMAL;
+            PRAGMA temp_storage = MEMORY;
+            PRAGMA foreign_keys = ON;
+            """
+            self.connection.executescript(script)
 
     def close(self) -> None:
         if self.connection:
