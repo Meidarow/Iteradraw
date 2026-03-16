@@ -36,15 +36,15 @@ class SQLFolderRepository(FolderRepository):
         foldersets_map = {}
 
         for row in self.database.execute(query).fetchall():
-            if row["id"] not in foldersets_map:
-                foldersets_map[row["id"]] = {
-                    "name": row["name"],
-                    "folders": {},
-                }
+            foldersets_map.setdefault(row["id"], {
+                "name": row["name"],
+                "folders": {},
+            })
             if not row["path"]:
                 continue
             foldersets_map[row["id"]]["folders"][Path(row["path"])] = Folder(
-                path=Path(row["path"]), enabled=row["enabled"]
+                path=Path(row["path"]),
+                enabled=row["enabled"]
             )
 
         return [FolderSet(
@@ -98,10 +98,10 @@ class SQLFolderRepository(FolderRepository):
             PersistenceError: Failed to update folderset.
         """
         try:
-            folderset_data = []
-            root_folders = []
+            folderset_data: list[tuple[str, bool, int]] = []
+            root_folders: list[str] = []
             for f in folderset.all:
-                root_folders.append(f.path)
+                root_folders.append(str(f.path))
                 folderset_data.append((str(f.path), f.enabled, folderset.id))
             self._insert_root_folders(folderset_data)
             self._prune_root_folders(root_folders, folderset.id)
@@ -159,7 +159,8 @@ class SQLFolderRepository(FolderRepository):
             logger.error(e)
             raise PersistenceError("Error when inserting root folders") from e
 
-    def _prune_root_folders(self, root_folders: list[str], folderset_id: int) -> None:
+    def _prune_root_folders(self, root_folders: list[str], folderset_id: int
+                            ) -> None:
         """
         Removes folders that are not in "root_folders" from the DB.
 
@@ -171,11 +172,13 @@ class SQLFolderRepository(FolderRepository):
         """
         try:
             if not root_folders:
-                return
-            params = [folderset_id , *root_folders]
+                query =  """DELETE FROM rootfolders WHERE folderset_id = ?"""
+            else:
+                query = " ".join([f"DELETE FROM rootfolders WHERE folderset_id = ? AND path NOT IN",
+                "(", ", ".join(["?" for _ in range(len(root_folders))]),")"])
+            params: list[int | str] = [folderset_id, *root_folders]
             self.database.execute(
-                " ".join([f"DELETE FROM rootfolders WHERE folderset_id = ? AND path NOT IN",
-                "(", ", ".join(["?" for _ in range(len(root_folders))]), ")"]),
+                query,
                 params,
             )
         except sqlite3.DatabaseError as e:
