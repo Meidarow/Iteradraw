@@ -6,6 +6,7 @@ from typing import (
 
 from iteradraw.core.application.config import ApplicationConfiguration
 from iteradraw.core.domain.exceptions import DatabaseConnectionError
+from iteradraw.interfaces import Database
 
 """
 This module includes the default database solution for Iteradraw.
@@ -15,7 +16,7 @@ SQLite3Database
 """
 
 
-class SQLite3Database:
+class SQLite3Database(Database):
     """
     SQLite3 implementation of the Iteradraw database backend.
 

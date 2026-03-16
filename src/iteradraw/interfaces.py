@@ -41,6 +41,32 @@ Usage:
 """
 
 
+class Database(ABC):
+    @abstractmethod
+    def __enter__(self) -> Database:
+        ...
+
+    @abstractmethod
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        ...
+
+    @abstractmethod
+    def open(self) -> None:
+        ...
+
+    @abstractmethod
+    def close(self) -> None:
+        ...
+
+    @abstractmethod
+    def commit(self) -> None:
+        ...
+
+    @abstractmethod
+    def rollback(self) -> None:
+        ...
+
+
 class FolderRepository(ABC):
     """
     Repository for FolderSet domain objects.
@@ -69,6 +95,7 @@ class FolderRepository(ABC):
     @abstractmethod
     def delete_folderset(self, folderset_id: int) -> None:
         ...
+
 
 class DirectoryRepository(ABC):
     """
@@ -111,28 +138,35 @@ class ImageRepository(ABC):
     def clear_images_under_parent(self, parent_id: int) -> None:
         ...
 
+
 class SessionRepository(ABC):
     """Abstract interface for database backends used in Draw-This."""
     ...
 
+
 class UnitOfWorkFactory(ABC):
     @abstractmethod
-    def __call__(self):
+    def __call__(self) -> UnitOfWork:
         ...
+
 
 class UnitOfWork(ABC):
+    dir_repo: DirectoryRepository
+    folder_repo : FolderRepository
+    database : Database
+
     @abstractmethod
-    def __enter__(self):
+    def __enter__(self) -> UnitOfWork:
         ...
 
     @abstractmethod
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         ...
 
     @abstractmethod
-    def commit(self):
+    def commit(self)-> None:
         ...
 
     @abstractmethod
-    def rollback(self):
+    def rollback(self) -> None:
         ...
