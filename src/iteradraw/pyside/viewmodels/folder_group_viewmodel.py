@@ -7,15 +7,8 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QFileDialog, QInputDialog
 
-from iteradraw.core.application.commands.folder_commands import (
-    AddFolderCommand,
-    RemoveFolderCommand,
-    SetAllFoldersEnabledCommand,
-    SetFolderEnabledCommand,
-    DeleteFolderSetCommand,
-    RenameFolderSetCommand,
-)
-from iteradraw.core.domain.events.domain_events import (
+from iteradraw.core.application.shell import ApplicationShell
+from iteradraw.core.domain.events.folder_events import (
     FolderAdded,
     FolderRemoved,
     FolderSetRenamed,
@@ -26,10 +19,10 @@ Viewmodel for the FolderGroupView GUI component.
 """
 
 class FolderGroupViewModel(QStandardItemModel):
-    def __init__(self, command_bus, event_bus, parent):
+    def __init__(self, shell: ApplicationShell, event_bus, parent):
         super().__init__(parent)
         self.view = parent
-        self.command_bus = command_bus
+        self.shell = shell
         self.event_bus = event_bus
         self.is_handling_change = False
         self.bind_signals()
@@ -65,9 +58,9 @@ class FolderGroupViewModel(QStandardItemModel):
         folderset_id = self.data(index, Qt.ItemDataRole.UserRole)
         folder_path = QFileDialog().getExistingDirectory()
         if folder_path:
-            self.add_folder_to_folderset(folderset_id, folder_path)
+            self.shell.add_folder(folderset_id, folder_path)
 
-    @Slot()# noinspection PyMethodMayBeStatic
+    @Slot()
     def on_open_folder_from_group(self, item) -> None:
         QDesktopServices.openUrl(item.text())
 
@@ -80,7 +73,7 @@ class FolderGroupViewModel(QStandardItemModel):
             index = parent_item.index()
             folderset_id = self.data(index, Qt.ItemDataRole.UserRole)
             folder_path = item.text()
-            self.remove_folder_from_folderset(folderset_id, folder_path)
+            self.shell.remove_folder(folderset_id, folder_path)
 
     @Slot()
     def on_rename_folder_group(self) -> None:
@@ -89,7 +82,7 @@ class FolderGroupViewModel(QStandardItemModel):
         folderset_id = self.data(index, Qt.ItemDataRole.UserRole)
         name, ok = QInputDialog().getText(self.view, "New name:", "")
         if name and ok:
-            self.rename_folderset(folderset_id, name)
+            self.shell.rename_folderset(folderset_id, name)
 
     @Slot()
     def on_delete_folder_group(self) -> None:
@@ -99,7 +92,7 @@ class FolderGroupViewModel(QStandardItemModel):
             parent_item = self.invisibleRootItem().child(0)
             index = parent_item.index()
             folderset_id = self.data(index, Qt.ItemDataRole.UserRole)
-            self.delete_folderset(folderset_id=folderset_id)
+            self.shell.delete_folderset(folderset_id=folderset_id)
 
     @Slot()
     def on_checkbox_changed(self, item: QStandardItem) -> None:
@@ -121,7 +114,7 @@ class FolderGroupViewModel(QStandardItemModel):
                     parent_item=item,
                     check_state=new_state,
                 )
-                self.set_all_folders_enabled(
+                self.shell.set_all_folders_enabled(
                     folderset_id=item.data(Qt.ItemDataRole.UserRole),
                     enabled=(Qt.CheckState.Checked == new_state),
                 )
@@ -129,7 +122,7 @@ class FolderGroupViewModel(QStandardItemModel):
                 parent = item.parent()
                 new_state = self._calculate_state_for_parent(parent=parent)
                 parent.setCheckState(new_state)
-                self.set_folder_enabled(
+                self.shell.set_folderset_enabled(
                     folderset_id=parent.data(Qt.ItemDataRole.UserRole),
                     folder_path=item.text(),
                     enabled=(Qt.CheckState.Checked == item.checkState()),
@@ -168,51 +161,6 @@ class FolderGroupViewModel(QStandardItemModel):
     on_folderset_deleted:
         Folder group removal is handled by FolderPanelView
     """
-
-    # =========================================================================
-    # Command Dispatchers:
-    #    Methods that issue commands on the command bus.
-    #
-    # Naming convention:
-    #    "action"() -> action describes application layer command
-    # =========================================================================
-
-    def add_folder_to_folderset(self, folderset_id, folder_path) -> None:
-        cmd = AddFolderCommand(
-            folder_path=folder_path,
-            enabled=True,
-            folderset_id=folderset_id,
-        )
-        self.command_bus.dispatch(cmd)
-
-    def remove_folder_from_folderset(self, folderset_id, folder_path) -> None:
-        cmd = RemoveFolderCommand(
-            folder_path=folder_path, folderset_id=folderset_id
-        )
-        self.command_bus.dispatch(cmd)
-
-    def set_folder_enabled(self, folderset_id, folder_path, enabled) -> None:
-        cmd = SetFolderEnabledCommand(
-            folderset_id=folderset_id,
-            folder_path=folder_path,
-            target_enabled=enabled,
-        )
-        self.command_bus.dispatch(cmd)
-
-    def set_all_folders_enabled(self, folderset_id, enabled) -> None:
-        cmd = SetAllFoldersEnabledCommand(
-            folderset_id=folderset_id,
-            target_enabled=enabled,
-        )
-        self.command_bus.dispatch(cmd)
-
-    def rename_folderset(self, folderset_id, name) -> None:
-        cmd = RenameFolderSetCommand(folderset_id=folderset_id, new_name=name)
-        self.command_bus.dispatch(cmd)
-
-    def delete_folderset(self, folderset_id) -> None:
-        cmd = DeleteFolderSetCommand(folderset_id=folderset_id)
-        self.command_bus.dispatch(cmd)
 
     # =========================================================================
     # Private Helpers
