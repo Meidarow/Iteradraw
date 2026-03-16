@@ -1,6 +1,5 @@
 import inspect
 from typing import Type
-
 """
 Dependency injection container for Iteradraw.
 
@@ -12,6 +11,7 @@ to be called by the bootstrapper at app initialization.
 class DependencyContainer:
     def __init__(self):
         self.registry = {}
+        self.default_concretes = {}
         self.resolving = set()
 
     def resolve[T](self, object_type: Type[T]) -> T:
@@ -30,12 +30,14 @@ class DependencyContainer:
 
     def generic_factory(self, object_type):
         parameter_instance_map = {}
+        if inspect.isabstract(object_type):
+            object_type = self.default_concretes[object_type]
         object_parameters = inspect.signature(object_type).parameters.values()
         for parameter in object_parameters:
             parameter_class = parameter.annotation
             if not inspect.isclass(parameter_class):
                 raise TypeError("Parameter type must be a class type")
-            parameter_instance_map[parameter.name] = self.resolve(parameter_class)
+            parameter_instance_map.setdefault(parameter.name , self.resolve(parameter_class))
 
         built_object = object_type(**parameter_instance_map,)
         return built_object
