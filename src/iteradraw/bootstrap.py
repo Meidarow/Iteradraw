@@ -2,14 +2,17 @@ import logging
 
 from iteradraw.container import DependencyContainer
 from iteradraw.core.domain.repositories.directory_repository import \
-    SQLDirectoryRepository
+    SQLite3DirectoryRepository
 from iteradraw.core.domain.repositories.folder_repository import \
-    SQLFolderRepository
+    SQLite3FolderRepository
 from iteradraw.core.domain.repositories.image_repository import SQLImageRepository
 from iteradraw.core.infrastructure.buses.command_bus import CommandBus
 from iteradraw.core.infrastructure.persistence.schema import SCHEMA
 from iteradraw.core.infrastructure.persistence.sqlite3_database import SQLite3Database
-from iteradraw.interfaces import CommandHandler, FolderRepository, ImageRepository, DirectoryRepository
+from iteradraw.core.infrastructure.persistence.unit_of_work import \
+    SQLite3UnitOfWorkFactory
+from iteradraw.interfaces import CommandHandler, FolderRepository, \
+    ImageRepository, DirectoryRepository, UnitOfWorkFactory
 from iteradraw.log_config import configure_logger
 
 """
@@ -30,6 +33,7 @@ def main() -> None:
     database = container.resolve(SQLite3Database)
     database.open()
     database.executescript(SCHEMA)
+    database.close()
     build_command_pipeline(container)
 
 def build_command_pipeline(container: DependencyContainer) -> None:
@@ -42,9 +46,7 @@ def build_command_pipeline(container: DependencyContainer) -> None:
         )
 
 def register_default_concrete_classes(container: DependencyContainer) -> None:
-    container.default_concretes[FolderRepository]=SQLFolderRepository
-    container.default_concretes[ImageRepository]=SQLImageRepository
-    container.default_concretes[DirectoryRepository]=SQLDirectoryRepository
+    container.default_concretes[UnitOfWorkFactory]=SQLite3UnitOfWorkFactory
 
 if __name__ == "__main__":
     logger.info("Application started")

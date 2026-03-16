@@ -9,7 +9,7 @@ from iteradraw.interfaces import FolderRepository
 
 logger = logging.getLogger(__name__)
 
-class SQLFolderRepository(FolderRepository):
+class SQLite3FolderRepository(FolderRepository):
     """
     Repository class managing UI facing data.
 

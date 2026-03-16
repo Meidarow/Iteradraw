@@ -4,7 +4,7 @@ import pytest
 
 from iteradraw.core.application.config import ApplicationConfiguration
 from iteradraw.core.domain.models.folder import FolderSet
-from iteradraw.core.domain.repositories.folder_repository import SQLFolderRepository
+from iteradraw.core.domain.repositories.folder_repository import SQLite3FolderRepository
 from iteradraw.core.infrastructure.persistence.schema import SCHEMA
 from iteradraw.core.infrastructure.persistence.sqlite3_database import SQLite3Database
 
@@ -37,7 +37,7 @@ def make_database_in_memory():
 @pytest.fixture(scope="function")
 def setup(make_database_in_memory):
     db = make_database_in_memory
-    repository = SQLFolderRepository(database=db)
+    repository = SQLite3FolderRepository(database=db)
     return SimpleNamespace(db=db, repository=repository)
 
 @pytest.fixture(scope="function")

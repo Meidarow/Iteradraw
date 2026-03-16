@@ -8,7 +8,7 @@ from iteradraw.interfaces import DirectoryRepository
 
 logger = logging.getLogger(__name__)
 
-class SQLDirectoryRepository(DirectoryRepository):
+class SQLite3DirectoryRepository(DirectoryRepository):
     """
     Repository class managing internal directory tree.
 
