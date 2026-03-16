@@ -6,8 +6,7 @@ from os import DirEntry
 from pathlib import Path
 from typing import Generator
 
-from iteradraw.core.domain.repositories.image_repository import ImageRepository
-from iteradraw.interfaces import DirectoryRepository
+from iteradraw.interfaces import DirectoryRepository, ImageRepository
 
 """
 
@@ -17,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class FileDiscoveryService:
     """
-    system
+    Service class responsible for filesystem traversal and DB tree maintenance.
     """
 
     class _Crawler:
@@ -66,7 +65,7 @@ class FileDiscoveryService:
         self.crawler = self._Crawler()
 
     def scan_stale_directories(self):
-        self._populate_directories()
+        self._fresh_dirs, self._stale_dirs = self.dir_repo.get_partitioned_directories()
         batch = []
         while self._stale_dirs:
             stale_dir_id, stale_dir_path = self._stale_dirs.pop()
@@ -99,29 +98,11 @@ class FileDiscoveryService:
         self.image_repo.insert_image_batch(batch)
         self._fresh_dirs.clear()
 
-# Private Helpers
-
-    def _populate_directories(self) -> None:
-        root_map, dir_edges = self.dir_repo.get_all_directories()
-        for root in root_map.items():
-            root_id, root_path = root
-            self._sort_directory_by_status(root_id, root_path, dir_edges)
-            self._connect_descendants(root_id, root_path, dir_edges)
-
-    def _connect_descendants(self, root_id: int, path_to_root: str, edges: dict) -> None:
-        dirs = [(edges[root_id], path_to_root)]
-        while dirs:
-            dir_data, path_to_ancestor = dirs.pop()
-            for child in dir_data["children"]:
-                path_to_child = str(Path(path_to_ancestor).joinpath(edges[child]["dir_name"]))
-                self._sort_directory_by_status(child, path_to_child, edges)
-                dirs.append((edges[child], path_to_child))
-
-    def _sort_directory_by_status(self, dir_id: int, path: str, edges: dict) -> None:
+    def _sort_directory_by_status(self, dir_id: int, path: str, edges: dict, fresh, stale) -> None:
         entry = edges[dir_id]
         crawl_time = entry["crawl_time"]
         mod_time = entry["mod_time"]
         if crawl_time < mod_time or crawl_time == 0:
-            self._stale_dirs.add((dir_id,path))
+            stale.add((dir_id, path))
         else:
-            self._fresh_dirs.add(path)
+            fresh.add(path)
