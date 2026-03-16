@@ -20,7 +20,7 @@ class FolderRemoved(Event):
 
 @dataclass(frozen=True)
 class FolderSetAdded(Event):
-    folderset: FolderSet
+    folderset_id: int
 
 
 @dataclass(frozen=True)

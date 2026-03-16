@@ -38,13 +38,6 @@ class DeleteFolderSetCommand(Command):
 
 
 @dataclass(frozen=True)
-class MoveFolderBetweenFolderSetsCommand(Command):
-    origin_folderset_id: int
-    destination_folderset_id: int
-    folder_path: Path
-
-
-@dataclass(frozen=True)
 class SetFolderEnabledCommand(Command):
     folderset_id: int
     folder_path: Path
@@ -55,3 +48,10 @@ class SetFolderEnabledCommand(Command):
 class SetAllFoldersEnabledCommand(Command):
     folderset_id: int
     target_enabled: bool
+
+
+@dataclass(frozen=True)
+class MoveFolderBetweenFolderSetsCommand(Command):
+    origin_folderset_id: int
+    destination_folderset_id: int
+    folder_path: Path
