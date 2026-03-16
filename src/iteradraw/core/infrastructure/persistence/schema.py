@@ -38,4 +38,21 @@ CREATE TABLE IF NOT EXISTS images (
     FOREIGN KEY (parent_id) REFERENCES discovered_folders(dir_id)
     ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS sessions (
+        session_id INTEGER PRIMARY KEY,
+        date INTEGER
+    );
+    
+CREATE TABLE IF NOT EXISTS session_images (
+    session_id INTEGER NOT NULL ,
+    image_id INTEGER,
+    thumbnail_hash TEXT NOT NULL,
+    timer INTEGER NOT NULL,
+    position INTEGER NOT NULL,
+    note TEXT,
+    FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+    ON DELETE CASCADE,
+    FOREIGN KEY (image_id) REFERENCES images(image_id)
+);
 """
