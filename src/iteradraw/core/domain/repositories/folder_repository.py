@@ -171,8 +171,10 @@ class SQLite3FolderRepository(FolderRepository):
 
     def _insert_root_folders(self, root_folder_data: list[tuple[str, bool, int]]) -> None:
         """
-        Inserts the root folders in the DB.
+        Inserts the root folders in the DB, updates existing folders.
 
+        If a root folder already exists in the DB, it will have its enabled
+        status updated.
         Args:
             root_folder_data: Path, enabled status and owner folderset ID.
         Raises:
@@ -184,7 +186,8 @@ class SQLite3FolderRepository(FolderRepository):
         query = """
         INSERT INTO rootfolders (path, enabled, folderset_id)
         VALUES (?, ?, ?)
-        ON CONFLICT (path, folderset_id) DO NOTHING
+        ON CONFLICT (path, folderset_id) DO 
+        UPDATE SET enabled = excluded.enabled
         """
         try:
             self.database.executemany(query,root_folder_data,)
