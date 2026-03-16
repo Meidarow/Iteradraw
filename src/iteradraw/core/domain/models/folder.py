@@ -46,20 +46,38 @@ class FolderSet:
 
     def add(self, path: Path, enabled: bool = True) -> "FolderSet":
         """Add a folder with optional enabled state."""
+        if not isinstance(path, Path):
+            raise TypeError("Path must be of type: pathlib.Path")
+
         if path in self.folders:
-            return self
+            raise KeyError("Path already exists")
+
         new_data = self.folders.copy()
         new_data[path] = Folder(path=path, enabled=enabled)
         return replace(self, folders=new_data)
 
     def remove(self, path: Path) -> "FolderSet":
         """Remove a folder."""
-        new_data = self.folders.copy()
-        new_data.pop(path, None)
-        return replace(self, folders=new_data)
+        if not isinstance(path, Path):
+            raise TypeError("Path must be of type: pathlib.Path")
+
+        folders = self.folders.copy()
+
+        try:
+            folders.pop(path)
+        except KeyError:
+            raise KeyError("Path does not exist") from None
+
+        return replace(self, folders=folders)
 
     def set_folder_enabled(self, path: Path, enabled: bool) -> "FolderSet":
         """Enable a folder explicitly."""
+        if not isinstance(path, Path):
+            raise TypeError("Path must be of type: pathlib.Path")
+
+        if path not in self.folders:
+            raise KeyError("Path does not exist")
+
         new_data = self.folders.copy()
         new_data[path] = replace(new_data[path], enabled=enabled)
         return replace(self, folders=new_data)
