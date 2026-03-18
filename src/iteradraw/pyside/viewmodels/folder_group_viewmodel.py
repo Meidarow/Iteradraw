@@ -7,30 +7,24 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QFileDialog, QInputDialog
 
-from iteradraw.core.application.shell import ApplicationShell
-from iteradraw.core.domain.events.folder_events import (
-    FolderAdded,
-    FolderRemoved,
-    FolderSetRenamed,
-)
+from iteradraw.pyside.pyside_shell import PySideShell
 
 """
 Viewmodel for the FolderGroupView GUI component.
 """
 
 class FolderGroupViewModel(QStandardItemModel):
-    def __init__(self, shell: ApplicationShell, event_bus, parent):
+    def __init__(self, shell: PySideShell, parent):
         super().__init__(parent)
         self.view = parent
         self.shell = shell
-        self.event_bus = event_bus
         self.is_handling_change = False
         self.bind_signals()
 
     def populate(self, folderset) -> None:
         self.itemChanged.disconnect(self.on_checkbox_changed)
         group = self._build_and_configure_group(
-            folderset_id=folderset.uuid, group_name=folderset.display_name
+            folderset_id=folderset.id, group_name=folderset.display_name
         )
         self.invisibleRootItem().appendRow(group)
         for f in folderset.all:
@@ -41,10 +35,17 @@ class FolderGroupViewModel(QStandardItemModel):
 
     def bind_signals(self) -> None:
         self.itemChanged.connect(self.on_checkbox_changed)
+        self.shell.signals.folder_added.connect(
+            self.on_folder_added_to_folderset)
+        self.shell.signals.folderset_renamed.connect(self.on_folderset_renamed)
+        self.shell.signals.folder_removed.connect(
+            self.on_folder_removed_from_folderset
+        )
 
     # =========================================================================
     # Signal Slots
-    #    Slots for Qt-based signals emitted by the GUI
+    #    Slots for Qt-based signals emitted by the GUI.
+    #    These allow he GUI to communicate commands to the core.
     #
     # Naming convention:
     #    on_"command"() -> command describes GUI action
@@ -131,36 +132,40 @@ class FolderGroupViewModel(QStandardItemModel):
             self.is_handling_change = False
 
     # =========================================================================
-    # Event Slots:
-    #    Slots for events isued on the event_bus
+    # Event Signal Slots:
+    #    Slots for events issued in the core, emitted as signals in Shell.
+    #    These allow the UI to react to core changes.
     #
     # Naming convention:
-    #    on_"event_happened"() -> event describes past happening
+    #    on_"event_that_happened"() -> event describes past happening
     # =========================================================================
 
-    def on_folder_added_to_folderset(self, event: FolderAdded) -> None:
+    @Slot()
+    def on_folder_added_to_folderset(
+            self,
+            folder_path: str,
+            enabled: bool) -> None:
         parent_item = self.invisibleRootItem().child(0)
         parent_item.appendRow(
-            self._build_and_configure_item(event.folder_path, event.enabled)
-        )
+            self._build_and_configure_item(
+                folder_path,
+                enabled
+            ))
 
-    def on_folder_removed_from_folderset(self, event: FolderRemoved):
+    @Slot()
+    def on_folder_removed_from_folderset(self, folder_path: str) -> None:
         parent_item = self.invisibleRootItem().child(0)
         for child_row in range(parent_item.rowCount()):
             child_item = parent_item.child(child_row)
-            if not child_item.text() == event.folder_path:
+            if not child_item.text() == folder_path:
                 continue
             parent_item.removeRow(child_row)
             return
 
-    def on_folderset_renamed(self, event: FolderSetRenamed):
+    @Slot()
+    def on_folderset_renamed(self, name: str) -> None:
         parent_item = self.invisibleRootItem().child(0)
-        parent_item.setText(event.new_name)
-
-    """
-    on_folderset_deleted:
-        Folder group removal is handled by FolderPanelView
-    """
+        parent_item.setText(name)
 
     # =========================================================================
     # Private Helpers

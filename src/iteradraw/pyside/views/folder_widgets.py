@@ -1,4 +1,4 @@
-from PySide6.QtCore import QSize, QPoint
+from PySide6.QtCore import QSize, QPoint, Slot
 from PySide6.QtGui import QAction, Qt
 from PySide6.QtWidgets import (
     QTreeView,
@@ -12,12 +12,7 @@ from PySide6.QtWidgets import (
     QAbstractScrollArea,
 )
 
-from iteradraw.core.application.commands.folder_commands import AddFolderSetCommand
-from iteradraw.core.domain.events.domain_events import (
-    FolderSetAdded,
-    FolderSetRemoved,
-)
-from iteradraw.core.domain.models.folder import FolderSet
+from iteradraw.pyside.pyside_shell import PySideShell
 from iteradraw.pyside.viewmodels.folder_group_viewmodel import (
     FolderGroupViewModel,
 )
@@ -72,10 +67,9 @@ class FolderPanelView(QStackedWidget):
 
             self._parent.addWidget(self.scroll_area)
 
-    def __init__(self, command_bus, event_bus):
+    def __init__(self, shell: PySideShell) -> None:
         super().__init__()
-        self.command_bus = command_bus
-        self.event_bus = event_bus
+        self.shell = shell
         self._ui = self._UiBuilder(self)
         self._ui.build()
         self.content = self._ui.content.layout()
@@ -83,13 +77,12 @@ class FolderPanelView(QStackedWidget):
 
     def _bind_signals(self) -> None:
         self.customContextMenuRequested.connect(self.on_context_menu_requested)
-        self.event_bus.subscribe(
-            FolderSetAdded,
-            lambda event: self.on_folderset_added(event.folderset),
+
+        self.shell.signals.folderset_created.connect(
+            self.on_folderset_created
         )
-        self.event_bus.subscribe(
-            FolderSetRemoved,
-            self.on_folderset_removed,
+        self.shell.signals.folder_removed.connect(
+            self.on_folderset_removed
         )
 
     # =============================================================================
@@ -102,52 +95,44 @@ class FolderPanelView(QStackedWidget):
 
     def on_add_folder_group(self) -> None:
         auto_name = self._determine_folder_group_name()
-        self.add_folderset(folderset_name=auto_name)
+        self.shell.add_folderset(name=auto_name)
 
     # =============================================================================
-    # Command Dispatchers:
-    #    Methods that issue commands on the command bus.
-    #
-    # Naming convention:
-    #    "action"() -> action describes application layer command
-    # =============================================================================
-
-    def add_folderset(self, folderset_name: str):
-        cmd = AddFolderSetCommand(display_name=folderset_name)
-        self.command_bus.dispatch(cmd)
-
-    # =============================================================================
-    # Event Slots:
-    #    Slots for events used on the event_bus
+    # Event Signal Slots:
+    #    Slots for events issued in the core, emitted as signals in Shell.
+    #    These allow the UI to react to core changes.
     #
     # Naming convention:
     #    on_"event_happened"() -> event describes past happening
     # =============================================================================
 
-    def on_folderset_removed(self, event: FolderSetRemoved) -> None:
+    @Slot()
+    def on_folderset_removed(self, folderset_id: int) -> None:
         for index in range(self.content.count()):
             widget = self.content.itemAt(index).widget()
             if not isinstance(widget, FolderGroupView):
                 continue
             root_item = widget.model.invisibleRootItem().child(0)
             widget_id = root_item.data(Qt.ItemDataRole.UserRole)
-            if not widget_id == event.folderset_id:
+            if not widget_id == folderset_id:
                 continue
             self.content.removeWidget(widget)
             widget.deleteLater()
             break
         self._set_current_top_panel()
 
-    def on_folderset_added(self, folderset: FolderSet) -> None:
+    @Slot()
+    def on_folderset_created(self, folderset_id: int) -> None:
         folder_group = FolderGroupView()
         vm = FolderGroupViewModel(
-            self.command_bus, self.event_bus, folder_group
+            self.shell, folder_group
         )
         folder_group.assign_viewmodel_and_build(vm)
-        vm.populate(folderset)
+        vm.populate(self.shell.fetch_folderset(folderset_id))
         self.content.addWidget(folder_group)
         self._set_current_top_panel()
 
+    @Slot()
     def on_context_menu_requested(self, position) -> None:
         """
         Builds and shows the correct context menu on the fly.
@@ -176,7 +161,6 @@ class FolderPanelView(QStackedWidget):
         """
         Method returns the placeholder name for new folder groups.
         """
-        # TODO ass disambiguation via numbering, i.e. NFG, NFG (1), NFG (2), etc.
         return "New Folder Group"
 
     def _set_current_top_panel(self):
@@ -259,12 +243,12 @@ class FolderGroupView(QTreeView):
         Builds and shows the correct context menu on the fly.
         """
         index = self.indexAt(position)
-        menu = QMenu()  # Create a new, fresh menu
+        menu = QMenu()
 
         # Case 1: Clicked on group or empty space
         if (
             not index.isValid()
-            or self.model.itemFromIndex(index).hasChildren()
+                or not self.model.itemFromIndex(index).hasChildren()
         ):
             self._add_action(
                 menu,
@@ -326,7 +310,7 @@ class FolderGroupView(QTreeView):
             return super().minimumSizeHint()
 
         # Get height of the root item (row 0)
-        root_index = self.model().index(0, 0)
+        root_index = self.model.index(0, 0)
         height = self.rowHeight(root_index)
 
         # Add 2px for any borders/padding
