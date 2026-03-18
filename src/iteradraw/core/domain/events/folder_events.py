@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 from pathlib import Path
-from uuid import UUID
 
 from iteradraw.interfaces import Event
-from iteradraw.core.domain.models.folder import FolderSet
+
 
 @dataclass(frozen=True)
 class FolderAdded(Event):
@@ -19,19 +18,19 @@ class FolderRemoved(Event):
 
 
 @dataclass(frozen=True)
-class FolderSetAdded(Event):
+class FolderSetCreated(Event):
     folderset_id: int
 
 
 @dataclass(frozen=True)
-class FolderSetRemoved(Event):
+class FolderSetDeleted(Event):
     folderset_id: int
 
 
 @dataclass(frozen=True)
 class FolderSetRenamed(Event):
     folderset_id: int
-    new_name: str
+    name: str
 
 
 @dataclass(frozen=True)
@@ -49,6 +48,6 @@ class AllFoldersEnabledSet(Event):
 
 @dataclass(frozen=True)
 class FolderMovedBetweenFolderSets(Event):
-    origin_folderset_id: int
-    destination_folderset_id: int
+    origin_id: int
+    destination_id: int
     folder_path: Path
