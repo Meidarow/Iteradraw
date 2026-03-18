@@ -14,7 +14,7 @@ class DependencyContainer:
         self.default_concretes = {}
         self.resolving = set()
 
-    def resolve[T](self, object_type: Type[T]) -> T:
+    def resolve[T](self, object_type: "Type[T]") -> T:
         if object_type in self.registry:
             return self.registry[object_type]
 
@@ -37,7 +37,10 @@ class DependencyContainer:
             parameter_class = parameter.annotation
             if not inspect.isclass(parameter_class):
                 raise TypeError("Parameter type must be a class type")
-            parameter_instance_map.setdefault(parameter.name , self.resolve(parameter_class))
+            parameter_instance_map.setdefault(
+                parameter.name,
+                self.resolve(parameter_class)
+            )
 
         built_object = object_type(**parameter_instance_map,)
         return built_object
