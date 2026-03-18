@@ -3,7 +3,8 @@ import sqlite3
 from pathlib import Path
 
 from iteradraw.core.domain.exceptions import PersistenceError
-from iteradraw.core.infrastructure.persistence.sqlite3_database import SQLite3Database
+from iteradraw.core.infrastructure.persistence.sqlite3_database import \
+    SQLite3Database
 from iteradraw.interfaces import DirectoryRepository
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ class SQLite3DirectoryRepository(DirectoryRepository):
         self.database = database
 
     def create_directory(self, dir_name: str, parent_id: int,
-                         crawl_time: int, mod_time: int) -> int:
+                         crawl_time: int = 0, mod_time: int = 0) -> int:
         """
         Adds directory node and closure edges to database.
 
@@ -37,7 +38,7 @@ class SQLite3DirectoryRepository(DirectoryRepository):
         return dir_id
 
     def create_directories(self, dirs: list[Path]) -> list[int]:
-        """
+        """ todo rename this method meant for roots
         Bulk adds directory nodes and closure edges to database.
 
         This method relies on materializing the full path
@@ -47,7 +48,7 @@ class SQLite3DirectoryRepository(DirectoryRepository):
         new_dirs = []
         for dir_name in dirs:
             if not self.is_duplicate(dir_name):
-                new_dirs.append(dir_name)
+                new_dirs.append(str(dir_name))
         dir_ids = self._register_node_batch(new_dirs)
         self._register_node_reflection_batch(dir_ids)
         return list(zip(dir_ids, new_dirs))
