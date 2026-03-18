@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QMainWindow, QFileDialog, QTabWidget
 
+from iteradraw.pyside.pyside_shell import PySideShell
 from iteradraw.pyside.views.tabs_views import SlideshowControlTab, SettingsTab
 
 
@@ -22,15 +23,14 @@ class MainWindow(QMainWindow):
         - initialize(): Initial boot-up and data load for the app.
     """
 
-    def __init__(self, command_bus, event_bus):
+    def __init__(self, shell: PySideShell):
         super().__init__()
         self.setWindowTitle("Showcase: FolderGroupView")
         self.resize(960, 540)
         self.file_dialog = QFileDialog()
         tabs = QTabWidget()
         main_tab = SlideshowControlTab(
-            command_bus=command_bus,
-            event_bus=event_bus,
+            shell=shell,
         )
         settings_tab = SettingsTab()
 

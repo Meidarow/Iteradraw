@@ -2,7 +2,6 @@ from PySide6.QtCore import Slot, Qt, QPointF
 from PySide6.QtGui import QPainter, QPixmap, QPalette, QColor
 from PySide6.QtWidgets import QWidget
 
-from iteradraw.core.application.commands.slideshow_commands import StartSlideshowCommand
 
 
 class ImageViewerWidget(QWidget):

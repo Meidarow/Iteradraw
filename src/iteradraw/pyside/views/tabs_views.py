@@ -5,8 +5,10 @@ from PySide6.QtWidgets import (
     QSplitter,
 )
 
-from iteradraw.pyside.views.folder_widgets import FolderPanelView
+from iteradraw.pyside.pyside_shell import PySideShell
 from iteradraw.pyside.views.control_widgets import SidePanelView
+from iteradraw.pyside.views.folder_widgets import FolderPanelView
+
 
 class SlideshowControlTab(QWidget):
     """
@@ -25,12 +27,11 @@ class SlideshowControlTab(QWidget):
     to each appropriate data-bound component's viewmodel.
     """
 
-    def __init__(self, command_bus, event_bus):
+    def __init__(self, shell: PySideShell):
         super().__init__()
         horizontal_splitter = QSplitter(Qt.Orientation.Horizontal)
         folder_panel = FolderPanelView(
-            command_bus=command_bus,
-            event_bus=event_bus,
+            shell=shell,
         )
         sidebar_panel = SidePanelView()
 
