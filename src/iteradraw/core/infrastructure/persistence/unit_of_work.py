@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 from iteradraw.core.domain.repositories.directory_repository import \
     SQLite3DirectoryRepository
 from iteradraw.core.domain.repositories.folder_repository import \
     SQLite3FolderRepository
-from iteradraw.core.infrastructure.persistence.sqlite3_database import SQLite3Database
+from iteradraw.core.infrastructure.persistence.sqlite3_database import \
+    SQLite3Database
 from iteradraw.interfaces import UnitOfWork, UnitOfWorkFactory
 
 
