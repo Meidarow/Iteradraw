@@ -5,16 +5,12 @@ from uuid import UUID
 from PySide6.QtWidgets import QApplication
 
 # 2. Import the REAL commands and events your view uses
-from iteradraw.core.application.commands.folder_commands import AddFolderSetCommand
-from iteradraw.core.domain.events.domain_events import FolderSetAdded
+from iteradraw.core.application.commands.folder_commands import \
+    AddFolderSetCommand
 from iteradraw.core.domain.models.folder import Folder, FolderSet
-
-# 1. Import your REAL buses
-from iteradraw.core.infrastructure import CommandBus
-from iteradraw.core.infrastructure import EventBus
-
-# 3. Import your REAL window
-from iteradraw.pyside import MainWindow
+from iteradraw.core.infrastructure.buses.command_bus import CommandBus
+from iteradraw.core.infrastructure.buses.event_bus import EventBus
+from iteradraw.pyside.main_window import MainWindow
 
 
 def get_mock_folderset(

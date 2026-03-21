@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 
-from iteradraw.interfaces import Event
 from iteradraw.core.domain.models.folder import FolderSet, Folder
+from iteradraw.interfaces import Event
+
 
 @dataclass(frozen=True)
 class TimedSlideshowRequested(Event):
