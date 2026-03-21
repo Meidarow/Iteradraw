@@ -105,15 +105,15 @@ class SQLite3DirectoryRepository(DirectoryRepository):
                     finished[child] = graph[child]
         return finished
 
-    def is_duplicate(self, dir_path: Path) -> int | None:
+    def is_duplicate(self, dir_path: Path) -> int:
         """
-        Returns ID if there is a match in the database else returns None.
+        Returns ID if there is a match in the database else returns 0.
 
         Naive approach to deduplication, less expensive than the greedy
         check against all directories in the database but still can be improved.
         Meant for full absolute paths.
         """
-        dir_name = dir_path.name
+        dir_name = str(dir_path)
         query = """
             SELECT dir_id
             FROM directories d
@@ -126,7 +126,7 @@ class SQLite3DirectoryRepository(DirectoryRepository):
         for candidate_id in candidate_ids:
             if self.get_normalized_path(candidate_id) == dir_path:
                 return candidate_id
-        return None
+        return 0
 
     def get_normalized_path(self, dir_id: int) -> Path:
         """
@@ -204,7 +204,8 @@ class SQLite3DirectoryRepository(DirectoryRepository):
                 return []
             insert_folders_query = " ".join(
                 ["INSERT INTO directories (dir_name, crawl_time, mod_time) VALUES",
-                 ", ".join(["(?, 0, 0)" for _ in range(len(dirs))]), ]
+                 ", ".join(["(?, 0, 0)" for _ in range(len(dirs))]),
+                 "RETURNING dir_id"]
             )
             rows = self.database.execute(insert_folders_query, dirs).fetchall()
             return [(directory_id["dir_id"]) for directory_id in rows]
