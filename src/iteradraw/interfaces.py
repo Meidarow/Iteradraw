@@ -1,8 +1,9 @@
+from __future__ import annotations
+
+import typing
 from abc import ABC, abstractmethod
-from os import PathLike
 from pathlib import Path
-from typing import runtime_checkable, Protocol, Iterator, Iterable, Any, Type, TypeVar, Generic
-from uuid import UUID
+from typing import Iterable, Any, Type, TypeVar, Generic
 
 from iteradraw.core.domain.models.folder import FolderSet
 
@@ -35,15 +36,16 @@ sessions.
 Classes:
     DatabaseBackend: protocol for session resource management backends.
     Persistence: protocol for settings/user-prefs/content backends.
-
-Usage:
-
 """
 
 
 class Database(ABC):
     @abstractmethod
     def __enter__(self) -> Database:
+        ...
+
+    @abstractmethod
+    def execute(self, query, params):
         ...
 
     @abstractmethod
