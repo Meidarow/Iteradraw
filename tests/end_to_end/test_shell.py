@@ -1,41 +1,4 @@
-from types import SimpleNamespace
-
-import pytest
-
-from iteradraw.bootstrap import ALL_HANDLERS, register_command_handlers
-from iteradraw.core.application.shell import ApplicationShell
-from iteradraw.core.infrastructure.buses.command_bus import CommandBus
-from iteradraw.core.infrastructure.buses.event_bus import EventBus
-
-
-@pytest.fixture(scope="function")
-def mock_bootstrap(
-        sqlite_database_in_memory,
-        sqlite_folder_repo,
-        sqlite_directory_repo,
-        sqlite_unit_of_work_factory
-) -> SimpleNamespace:
-    command_bus = CommandBus()
-    event_bus = EventBus()
-    handler_instances = {}
-    for handler_class in ALL_HANDLERS:
-        handler_instances.setdefault(
-            handler_class,
-            handler_class(sqlite_unit_of_work_factory, event_bus)
-        )
-    register_command_handlers(command_bus, handler_instances)
-    shell = ApplicationShell(
-        command_bus=command_bus,
-        event_bus=event_bus,
-        uow_factory=sqlite_unit_of_work_factory
-    )
-    return SimpleNamespace(
-        shell=shell,
-        event_bus=event_bus,
-        command_bus=command_bus,
-        uow_factory=sqlite_unit_of_work_factory,
-    )
-
+from iteradraw.core.domain.events.folder_events import FolderSetCreated
 
 class TestApplicationShell:
     class TestRenameFolderset:
@@ -55,6 +18,12 @@ class TestApplicationShell:
                 with app.uow_factory() as uow:
                     foldersets = uow.folder_repo.get_foldersets()
                     assert foldersets[0].display_name == "Test Folderset"
+
+            with subtests.test("Existing foldersets"):
+                app.shell.add_folderset("Test Folderset 2")
+                with app.uow_factory() as uow:
+                    foldersets = uow.folder_repo.get_foldersets()
+                    assert foldersets[1].display_name == "Test Folderset 2"
 
         def test_multiple_foldersets_add_folderset(self): ...
 
@@ -78,12 +47,20 @@ class TestApplicationShell:
             - All duplicate folders share same enabled status.
         """
 
-        def test_add_folder_functionality(self, subtests, mock_bootstrap):
+        def test_add_folder_functionality(self, mock_bootstrap):
             app = mock_bootstrap
-            with subtests.test("Empty folderset"):
-                app.shell.add_folderset("Test Folderset")
-            with subtests.test("Populated folderset"):
-                ...
+            test: dict[str, int] = {}
+
+            def set_id(x):
+                test["id"] = x
+
+            app.event_bus.subscribe(
+                FolderSetCreated,
+                (lambda x: set_id(x.folderset_id)), )
+            app.shell.add_folderset("Test Folderset")
+            for i in range(10):
+                app.shell.add_folder(test["id"], "/Test/Folder/%i" % i)
+
 
         def test_invalid_folderset_add_folder(self): ...
 

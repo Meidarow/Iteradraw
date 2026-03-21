@@ -9,11 +9,14 @@ from iteradraw.core.domain.exceptions import PersistenceError
 
 
 class TestCreateFolderset:
-    def test_create_folderset(self, setup):
+    def test_create_folderset(self, sqlite_unit_of_work):
         fs_name = "Test Folder Set"
-        fs_id = setup.repository.create_folderset(fs_name)
-        db_fs = setup.db.execute("SELECT * FROM foldersets WHERE id = ?",
+        with sqlite_unit_of_work as uow:
+            fs_id = uow.folder_repo.create_folderset(fs_name)
+            db_fs = uow.database.execute(
+                "SELECT * FROM foldersets WHERE id = ?",
                                  (fs_id,)).fetchone()
+            uow.commit()
         assert fs_id == db_fs["id"]
         assert fs_name == db_fs["name"]
 
@@ -41,43 +44,54 @@ class TestUpdateFolderset:
     -
 
     """
-    def test_update_folderset_name(self, setup, make_folderset):
-        folderset = make_folderset(name="OLD NAME")
-        folderset = folderset.rename("NEW NAME")
-        setup.repository.update_folderset_name(folderset)
 
-        folderset = setup.repository.get_foldersets().pop()
+    def test_update_folderset_name(self, sqlite_unit_of_work,
+                                   make_mock_folderset):
+        folderset = make_mock_folderset(name="OLD NAME")
+        folderset = folderset.rename("NEW NAME")
+
+        with sqlite_unit_of_work as uow:
+            uow.folder_repo.update_folderset_name(folderset)
+            folderset = uow.folder_repo.get_foldersets().pop()
+            uow.commit()
+
         assert folderset.display_name == "NEW NAME"
 
-    def test_update_folderset_folder_add(self, setup, make_folderset):
-        folderset = make_folderset(dir_number=1)
+    def test_update_folderset_folder_add(self, sqlite_unit_of_work,
+                                         make_mock_folderset):
+        folderset = make_mock_folderset(dir_number=1)
         folder = list(folderset.folders.keys()).pop()
 
-        setup.repository.update_folderset_folders(folderset)
-        folderset = setup.repository.get_foldersets().pop()
+        with sqlite_unit_of_work as uow:
+            uow.folder_repo.update_folderset_folders(folderset)
+            folderset = uow.folder_repo.get_foldersets().pop()
+            uow.commit()
 
         directory = list(folderset.folders.keys()).pop()
         assert directory == folder
 
-    def test_update_folderset_add_missing_directory(self, setup,
-                                                    make_folderset):
-        folderset = make_folderset()
+    def test_update_folderset_add_missing_directory(self, sqlite_unit_of_work,
+                                                    make_mock_folderset):
+        folderset = make_mock_folderset()
         sample_dir = Path('/path/not/in/directories/database')
         folderset = folderset.add(sample_dir, True)
-        with pytest.raises(PersistenceError):
-            setup.repository.update_folderset_folders(folderset)
+        with sqlite_unit_of_work as uow:
+            with pytest.raises(PersistenceError):
+                uow.folder_repo.update_folderset_folders(folderset)
 
-    def test_update_folderset_folder_remove(self, setup, make_folderset):
-        folderset_pre = make_folderset(dir_number=1)
-        setup.repository.update_folderset_folders(folderset_pre)
-        folder = folderset_pre.all.pop().path
+    def test_update_folderset_folder_remove(self, sqlite_unit_of_work,
+                                            make_mock_folderset):
+        folderset_pre = make_mock_folderset(dir_number=1)
+        with sqlite_unit_of_work as uow:
+            uow.folder_repo.update_folderset_folders(folderset_pre)
+            folder = folderset_pre.all.pop().path
 
-        folderset_post = folderset_pre.remove(folder)
-        setup.repository.update_folderset_folders(folderset_post)
+            folderset_post = folderset_pre.remove(folder)
+            uow.folder_repo.update_folderset_folders(folderset_post)
 
-        folderset_db = setup.repository.get_foldersets().pop()
+            folderset_db = uow.folder_repo.get_foldersets().pop()
         assert folder not in folderset_db.folders
 
 
 class TestRemoveFolderset:
-    def test_folderset_remove(self, setup, make_folderset):...
+    def test_folderset_remove(self, make_mock_folderset): ...

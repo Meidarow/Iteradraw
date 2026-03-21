@@ -1,12 +1,18 @@
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 
+from iteradraw.bootstrap import ALL_HANDLERS, register_command_handlers
 from iteradraw.core.application.config import ApplicationConfiguration
+from iteradraw.core.application.shell import ApplicationShell
+from iteradraw.core.domain.models.folder import FolderSet
 from iteradraw.core.domain.repositories.directory_repository import \
     SQLite3DirectoryRepository
 from iteradraw.core.domain.repositories.folder_repository import \
     SQLite3FolderRepository
+from iteradraw.core.infrastructure.buses.command_bus import CommandBus
+from iteradraw.core.infrastructure.buses.event_bus import EventBus
 from iteradraw.core.infrastructure.persistence.schema import SCHEMA
 from iteradraw.core.infrastructure.persistence.sqlite3_database import \
     SQLite3Database
@@ -49,20 +55,6 @@ def sqlite_directory_repo(
 
 
 @pytest.fixture(scope="function")
-def sqlite_unit_of_work_factory(
-        sqlite_database_in_memory,
-        sqlite_folder_repo,
-        sqlite_directory_repo,
-):
-    uow_factory = SQLite3UnitOfWorkFactory(
-        database=sqlite_database_in_memory,
-        folder_repo=sqlite_folder_repo,
-        dir_repo=sqlite_directory_repo,
-    )
-    return uow_factory
-
-
-@pytest.fixture(scope="function")
 def sqlite_unit_of_work(
         sqlite_database_in_memory,
         sqlite_folder_repo,
@@ -75,6 +67,58 @@ def sqlite_unit_of_work(
     )
     return uow
 
+@pytest.fixture(scope="function")
+def sqlite_unit_of_work_factory(
+        sqlite_database_in_memory,
+        sqlite_folder_repo,
+        sqlite_directory_repo,
+):
+    uow_factory = SQLite3UnitOfWorkFactory(
+        database=sqlite_database_in_memory,
+        folder_repo=sqlite_folder_repo,
+        dir_repo=sqlite_directory_repo,
+    )
+    return uow_factory
+
+@pytest.fixture(scope="function")
+def mock_event_bus() -> EventBus:
+    event_bus = EventBus()
+    return event_bus
+
+
+@pytest.fixture(scope="function")
+def mock_command_bus() -> CommandBus:
+    command_bus = CommandBus()
+    return command_bus
+
+
+@pytest.fixture(scope="function")
+def mock_bootstrap(
+        sqlite_database_in_memory,
+        sqlite_folder_repo,
+        sqlite_directory_repo,
+        sqlite_unit_of_work_factory,
+        mock_event_bus,
+        mock_command_bus,
+) -> SimpleNamespace:
+    handler_instances = {}
+    for handler_class in ALL_HANDLERS:
+        handler_instances.setdefault(
+            handler_class,
+            handler_class(sqlite_unit_of_work_factory, mock_event_bus)
+        )
+    register_command_handlers(mock_command_bus, handler_instances)
+    shell = ApplicationShell(
+        command_bus=mock_command_bus,
+        event_bus=mock_event_bus,
+        uow_factory=sqlite_unit_of_work_factory
+    )
+    return SimpleNamespace(
+        shell=shell,
+        event_bus=mock_event_bus,
+        command_bus=mock_command_bus,
+        uow_factory=sqlite_unit_of_work_factory,
+    )
 
 @pytest.fixture(scope="function")
 def make_temp_dir_tree(tmp_path_factory):
@@ -91,3 +135,37 @@ def make_temp_dir_tree(tmp_path_factory):
                 file1 = local_dir / f"sub{i}{j}.jpg"
                 file1.touch()
     return roots
+
+
+@pytest.fixture(scope="function")
+def make_mock_folderset(
+        sqlite_database_in_memory,
+        sqlite_folder_repo,
+        make_temp_dir_tree):
+    def make(
+            name: str = "Test Folder Set",
+            dir_number: int = 0,
+    ):
+        db = sqlite_database_in_memory
+        folder_repo = sqlite_folder_repo
+        fs_id = folder_repo.create_folderset(name)
+        folderset = FolderSet(
+            id=fs_id,
+            display_name=name
+        )
+        if not dir_number:
+            return folderset
+
+        temp_dir_tree = make_temp_dir_tree.copy()
+        for i in range(dir_number):
+            sample_dir = temp_dir_tree.pop()
+            # Bypass DirectoryRepo to insert base node in DB
+            query = """
+            INSERT INTO directories (dir_name, crawl_time, mod_time) 
+            VALUES (?, 0, 0)
+            """
+            db.execute(query, (str(sample_dir),))
+            folderset = folderset.add(path=sample_dir)
+        return folderset
+
+    return make
