@@ -3,7 +3,6 @@ import os
 import random
 import time
 from os import DirEntry
-from pathlib import Path
 from typing import Generator
 
 from iteradraw.interfaces import DirectoryRepository, ImageRepository
@@ -65,21 +64,21 @@ class FileDiscoveryService:
         self.crawler = self._Crawler()
 
     def scan_stale_directories(self):
-        self._fresh_dirs, self._stale_dirs = self.dir_repo.get_partitioned_directories()
+        self._sort_directories(self.dir_repo.get_directories())
         batch = []
         while self._stale_dirs:
             stale_dir_id, stale_dir_path = self._stale_dirs.pop()
             generator = self.crawler.crawl(stale_dir_path)
             crawl_time = int(time.time())
             mod_time = int(os.stat(stale_dir_path).st_mtime)
-            self.dir_repo.update_dir(
+            self.dir_repo.update_directory(
                 dir_id=stale_dir_id,
                 crawl_time=crawl_time,
                 mod_time=mod_time,
             )
             for entry in generator:
                 if entry.is_dir() and entry.path not in self._fresh_dirs:
-                    dir_id = self.dir_repo.add_discovered_folder(
+                    dir_id = self.dir_repo.create_directory(
                         dir_name=entry.name,
                         crawl_time=0,
                         mod_time=0,
@@ -98,11 +97,10 @@ class FileDiscoveryService:
         self.image_repo.insert_image_batch(batch)
         self._fresh_dirs.clear()
 
-    def _sort_directory_by_status(self, dir_id: int, path: str, edges: dict, fresh, stale) -> None:
-        entry = edges[dir_id]
-        crawl_time = entry["crawl_time"]
-        mod_time = entry["mod_time"]
-        if crawl_time < mod_time or crawl_time == 0:
-            stale.add((dir_id, path))
-        else:
-            fresh.add(path)
+    def _sort_directories(self, directories) -> None:
+        for dir_id, dir_data in directories.items():
+            if dir_data["crawl_time"] < dir_data["mod_time"] or dir_data[
+                "crawl_time"] == 0:
+                self._stale_dirs.add((dir_id, dir_data["path"]))
+            else:
+                self._fresh_dirs.add(dir_data["path"])
