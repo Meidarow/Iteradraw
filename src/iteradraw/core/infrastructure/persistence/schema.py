@@ -12,10 +12,11 @@ CREATE TABLE IF NOT EXISTS directories (
 );
     
 CREATE TABLE IF NOT EXISTS rootfolders (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER,
     path TEXT NOT NULL,
     enabled BOOLEAN DEFAULT 1,
     folderset_id INT NOT NULL,
+    PRIMARY KEY (id, folderset_id),
     UNIQUE (path, folderset_id),
     FOREIGN KEY(folderset_id) REFERENCES foldersets(id)
     ON DELETE CASCADE,
