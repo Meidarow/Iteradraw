@@ -67,6 +67,7 @@ def main() -> None:
 def initialize_detabase(database: Database) -> None:
     database.open()
     database.executescript(SCHEMA)
+    database.commit()
     database.close()
 
 
