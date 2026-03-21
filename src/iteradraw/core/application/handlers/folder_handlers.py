@@ -23,13 +23,23 @@ from iteradraw.core.application.commands.folder_commands import (
     SetAllFoldersEnabledCommand,
     MoveFolderBetweenFolderSetsCommand,
 )
-from iteradraw.core.domain.events.folder_events import FolderSetRenamed, FolderRemoved, FolderAdded, FolderSetAdded, \
-    FolderSetRemoved, FolderEnabledSet, AllFoldersEnabledSet, FolderMovedBetweenFolderSets
+from iteradraw.core.domain.events.folder_events import FolderSetRenamed, \
+    FolderRemoved, FolderAdded, FolderSetCreated, \
+    FolderSetDeleted, FolderEnabledSet, AllFoldersEnabledSet, \
+    FolderMovedBetweenFolderSets
 from iteradraw.core.infrastructure.buses.event_bus import EventBus
 from iteradraw.interfaces import CommandHandler, UnitOfWorkFactory
 
 
 class AddFolderCommandHandler(CommandHandler[AddFolderCommand]):
+    """
+    Attributes:
+        command_type: AddFolderCommand
+
+    Arguments:
+        uow_factory: UnitOfWorkFactory
+        event_bus: EventBus
+    """
     command_type = AddFolderCommand
     def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
         self.uow_factory = uow_factory
@@ -40,6 +50,7 @@ class AddFolderCommandHandler(CommandHandler[AddFolderCommand]):
             folderset = uow.folder_repo.get_folderset(
                 folderset_id=command.folderset_id
             )
+            uow.dir_repo.create_directories([command.folder_path])
             folderset = folderset.add(command.folder_path, command.enabled)
             uow.folder_repo.update_folderset_folders(folderset=folderset)
             uow.commit()
@@ -53,6 +64,14 @@ class AddFolderCommandHandler(CommandHandler[AddFolderCommand]):
 
 
 class RemoveFolderCommandHandler(CommandHandler[RemoveFolderCommand]):
+    """
+    Attributes:
+        command_type: RemoveFolderCommand
+
+    Arguments:
+        uow_factory: UnitOfWorkFactory
+        event_bus: EventBus
+    """
     command_type = RemoveFolderCommand
     def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
         self.uow_factory = uow_factory
@@ -72,6 +91,14 @@ class RemoveFolderCommandHandler(CommandHandler[RemoveFolderCommand]):
         self.event_bus.publish(evt)
 
 class RenameFolderSetCommandHandler(CommandHandler[RenameFolderSetCommand]):
+    """
+    Attributes:
+        command_type: RenameFolderSetCommand
+
+    Arguments:
+        uow_factory: UnitOfWorkFactory
+        event_bus: EventBus
+    """
     command_type = RenameFolderSetCommand
     def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
         self.uow_factory = uow_factory
@@ -86,12 +113,20 @@ class RenameFolderSetCommandHandler(CommandHandler[RenameFolderSetCommand]):
 
         evt = FolderSetRenamed(
             folderset_id=command.folderset_id,
-            new_name=command.new_name
+            name=command.new_name
         )
         self.event_bus.publish(evt)
 
 
 class AddFolderSetCommandHandler(CommandHandler[AddFolderSetCommand]):
+    """
+    Attributes:
+        command_type: AddFolderSetCommand
+
+    Arguments:
+        uow_factory: UnitOfWorkFactory
+        event_bus: EventBus
+    """
     command_type = AddFolderSetCommand
     def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
         self.uow_factory = uow_factory
@@ -104,13 +139,21 @@ class AddFolderSetCommandHandler(CommandHandler[AddFolderSetCommand]):
             )
             uow.commit()
 
-        evt = FolderSetAdded(
+        evt = FolderSetCreated(
             folderset_id=folderset_id
         )
         self.event_bus.publish(evt)
 
 
 class DeleteFolderSetCommandHandler(CommandHandler[DeleteFolderSetCommand]):
+    """
+    Attributes:
+        command_type: DeleteFolderSetCommand
+
+    Arguments:
+        uow_factory: UnitOfWorkFactory
+        event_bus: EventBus
+    """
     command_type = DeleteFolderSetCommand
     def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
         self.uow_factory = uow_factory
@@ -121,13 +164,21 @@ class DeleteFolderSetCommandHandler(CommandHandler[DeleteFolderSetCommand]):
             uow.folder_repo.delete_folderset(folderset_id=command.folderset_id)
             uow.commit()
 
-        evt = FolderSetRemoved(
+        evt = FolderSetDeleted(
             folderset_id=command.folderset_id
         )
         self.event_bus.publish(evt)
 
 
 class SetFolderEnabledCommandHandler(CommandHandler[SetFolderEnabledCommand]):
+    """
+    Attributes:
+        command_type: SetFolderEnabledCommand
+
+    Arguments:
+        uow_factory: UnitOfWorkFactory
+        event_bus: EventBus
+    """
     command_type = SetFolderEnabledCommand
     def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
         self.uow_factory = uow_factory
@@ -152,6 +203,14 @@ class SetFolderEnabledCommandHandler(CommandHandler[SetFolderEnabledCommand]):
 
 
 class SetAllFoldersEnabledCommandHandler(CommandHandler[SetAllFoldersEnabledCommand]):
+    """
+    Attributes:
+        command_type: SetAllFoldersEnabledCommand
+
+    Arguments:
+        uow_factory: UnitOfWorkFactory
+        event_bus: EventBus
+    """
     command_type = SetAllFoldersEnabledCommand
     def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
         self.uow_factory = uow_factory
@@ -184,6 +243,13 @@ class MoveFolderBetweenFolderSetsCommandHandler(CommandHandler[MoveFolderBetween
     folder, it simply updates its enabled status to match what the folder had in
     the origin FS.
 
+    Attributes:
+        command_type: MoveFolderBetweenFolderSetsCommand
+
+    Arguments:
+        uow_factory: UnitOfWorkFactory
+        event_bus: EventBus
+
     Raises:
         KeyError: If origin folderset does not contain the folder being
         transferred.
@@ -211,8 +277,9 @@ class MoveFolderBetweenFolderSetsCommandHandler(CommandHandler[MoveFolderBetween
             uow.commit()
 
         evt = FolderMovedBetweenFolderSets(
-            origin_folderset_id=command.origin_folderset_id,
-            destination_folderset_id=command.destination_folderset_id,
+            origin_id=command.origin_folderset_id,
+            destination_id=command.destination_folderset_id,
             folder_path=command.folder_path,
         )
         self.event_bus.publish(evt)
+
