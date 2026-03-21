@@ -23,12 +23,12 @@ class FolderGroupViewModel(QStandardItemModel):
 
     def populate(self, folderset) -> None:
         self.itemChanged.disconnect(self.on_checkbox_changed)
-        group = self._build_and_configure_group(
+        group = FolderGroupItem(
             folderset_id=folderset.id, group_name=folderset.display_name
         )
         self.invisibleRootItem().appendRow(group)
         for f in folderset.all:
-            item = self._build_and_configure_item(f.path, f.enabled)
+            item = FolderItem(str(f.path), f.enabled)
             group.appendRow(item)
         group.setCheckState(self._calculate_state_for_parent(parent=group))
         self.itemChanged.connect(self.on_checkbox_changed)
@@ -109,7 +109,7 @@ class FolderGroupViewModel(QStandardItemModel):
             return
         self.is_handling_change = True
         try:
-            if item.hasChildren():
+            if isinstance(item, FolderGroupItem):
                 new_state = item.checkState()
                 self._set_state_for_all_children(
                     parent_item=item,
@@ -147,7 +147,7 @@ class FolderGroupViewModel(QStandardItemModel):
             enabled: bool) -> None:
         parent_item = self.invisibleRootItem().child(0)
         parent_item.appendRow(
-            self._build_and_configure_item(
+            FolderItem(
                 folder_path,
                 enabled
             ))
@@ -195,34 +195,6 @@ class FolderGroupViewModel(QStandardItemModel):
         else:
             return Qt.CheckState.PartiallyChecked
 
-    @staticmethod
-    def _build_and_configure_group(folderset_id, group_name) -> QStandardItem:
-        group = QStandardItem(group_name)
-        group.setDropEnabled(True)
-        group.setDragEnabled(False)
-        group.setCheckable(True)
-        group.setAutoTristate(True)
-        group.setEditable(False)
-        group.setData(
-            folderset_id,
-            Qt.ItemDataRole.UserRole,
-        )
-        return group
-
-    @staticmethod
-    def _build_and_configure_item(
-        folder_path: str, enabled: bool
-    ) -> QStandardItem:
-        item = QStandardItem(folder_path)
-        item.setDragEnabled(True)
-        item.setDropEnabled(False)
-        item.setCheckable(True)
-        item.setEditable(False)
-        item.setCheckState(
-            Qt.CheckState.Checked if enabled else Qt.CheckState.Unchecked
-        )
-        return item
-
     def _confirm_delete(self, message: str) -> bool:
         """
         Reusable helper to show a "Yes/No" confirmation dialog.
@@ -238,3 +210,29 @@ class FolderGroupViewModel(QStandardItemModel):
             QMessageBox.StandardButton.No,
         )
         return reply == QMessageBox.StandardButton.Yes
+
+
+class FolderGroupItem(QStandardItem):
+    def __init__(self, folderset_id, group_name):
+        super().__init__(group_name)
+        self.setDropEnabled(True)
+        self.setDragEnabled(False)
+        self.setCheckable(True)
+        self.setAutoTristate(True)
+        self.setEditable(False)
+        self.setData(
+            folderset_id,
+            Qt.ItemDataRole.UserRole,
+        )
+
+
+class FolderItem(QStandardItem):
+    def __init__(self, folder_path: str, enabled: bool):
+        super().__init__(folder_path)
+        self.setDropEnabled(False)
+        self.setDragEnabled(True)
+        self.setCheckable(True)
+        self.setEditable(False)
+        self.setCheckState(
+            Qt.CheckState.Checked if enabled else Qt.CheckState.Unchecked
+        )
