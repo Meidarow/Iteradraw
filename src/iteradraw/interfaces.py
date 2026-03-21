@@ -5,7 +5,9 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Iterable, Any, Type, TypeVar, Generic
 
-from iteradraw.core.domain.models.folder import FolderSet
+if typing.TYPE_CHECKING:
+    from iteradraw.core.domain.models.folder import FolderSet
+    from iteradraw.core.infrastructure.buses.event_bus import EventBus
 
 
 class Event(ABC):
@@ -18,6 +20,15 @@ TCommand = TypeVar("TCommand", bound="Command")
 
 class CommandHandler(ABC, Generic[TCommand]):
     command_type : Type[TCommand]
+
+    @abstractmethod
+    def __init__(
+            self,
+            unit_of_work_factory: UnitOfWorkFactory,
+            event_bus: EventBus
+    ) -> None:
+        ...
+
     def handle(self, command: TCommand):
         ...
 
