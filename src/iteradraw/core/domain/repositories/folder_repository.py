@@ -1,10 +1,12 @@
 import logging
 import sqlite3
+from itertools import chain
 from pathlib import Path
 
 from iteradraw.core.domain.exceptions import PersistenceError
 from iteradraw.core.domain.models.folder import FolderSet, Folder
-from iteradraw.core.infrastructure.persistence.sqlite3_database import SQLite3Database
+from iteradraw.core.infrastructure.persistence.sqlite3_database import \
+    SQLite3Database
 from iteradraw.interfaces import FolderRepository
 
 logger = logging.getLogger(__name__)
@@ -140,7 +142,7 @@ class SQLite3FolderRepository(FolderRepository):
         root_folders: list[str] = []
         for f in folderset.all:
             root_folders.append(str(f.path))
-            folderset_data.append((str(f.path), f.enabled, folderset.id))
+            folderset_data.append((str(f.path), bool(f.enabled), folderset.id))
 
         self._insert_root_folders(folderset_data)
         self._prune_root_folders(root_folders, folderset.id)
@@ -183,18 +185,31 @@ class SQLite3FolderRepository(FolderRepository):
         """
         if not root_folder_data:
             return
-        query = """
-        INSERT INTO rootfolders (path, enabled, folderset_id)
-        VALUES (?, ?, ?)
-        ON CONFLICT (path, folderset_id) DO 
-        UPDATE SET enabled = excluded.enabled
-        """
+        query = " ".join([
+            """ WITH vals(path, enabled, folderset_id) AS (VALUES """,
+            ", ".join(
+                ["(?, ?, ?)" for _ in range(len(root_folder_data))]
+            ),
+            """) INSERT INTO rootfolders (id, path, enabled, folderset_id)
+            SELECT d.dir_id, v.path, v.enabled, v.folderset_id 
+            FROM vals v INNER JOIN directories d ON v.path = d.dir_name
+            ON CONFLICT (id, folderset_id) DO 
+            UPDATE SET enabled = excluded.enabled
+            RETURNING path
+            """
+        ])
+        params = tuple(chain.from_iterable(root_folder_data))
         try:
-            self.database.executemany(query,root_folder_data,)
-        except sqlite3.IntegrityError:
-            logger.error("Directory node missing from directories table",
-                         exc_info=True)
-            raise PersistenceError("Directories node does not exist") from None
+            rows = self.database.execute(query, params).fetchall()
+            inserted_paths = {
+                item["path"] for item in rows
+            }
+            for folder in root_folder_data:
+                if folder[0] not in inserted_paths:
+                    logger.error(
+                        f"Directory node missing for folder {folder[0]}",
+                        exc_info=True)
+                    raise PersistenceError("Directories node does not exist")
         except sqlite3.DatabaseError as e:
             logger.error(e)
             raise PersistenceError("Error when inserting root folders") from e
