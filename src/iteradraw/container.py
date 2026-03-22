@@ -1,5 +1,6 @@
 import inspect
-from typing import Type
+from typing import Type, get_type_hints
+
 """
 Dependency injection container for Iteradraw.
 
@@ -32,14 +33,15 @@ class DependencyContainer:
         parameter_instance_map = {}
         if inspect.isabstract(object_type):
             object_type = self.default_concretes[object_type]
-        object_parameters = inspect.signature(object_type).parameters.values()
-        for parameter in object_parameters:
-            parameter_class = parameter.annotation
-            if not inspect.isclass(parameter_class):
+        parameters = get_type_hints(object_type.__init__).items()
+        for name, cls in parameters:
+            if name == "return":
+                continue
+            if not inspect.isclass(cls):
                 raise TypeError("Parameter type must be a class type")
             parameter_instance_map.setdefault(
-                parameter.name,
-                self.resolve(parameter_class)
+                name,
+                self.resolve(cls)
             )
 
         built_object = object_type(**parameter_instance_map,)
