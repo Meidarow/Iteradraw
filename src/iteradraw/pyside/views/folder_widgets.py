@@ -81,7 +81,7 @@ class FolderPanelView(QStackedWidget):
         self.shell.signals.folderset_created.connect(
             self.on_folderset_created
         )
-        self.shell.signals.folder_removed.connect(
+        self.shell.signals.folderset_deleted.connect(
             self.on_folderset_removed
         )
 

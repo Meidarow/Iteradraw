@@ -107,7 +107,7 @@ class PySideShell(ApplicationShell):
 
     def _on_folder_added(self, event: FolderAdded):
         self.signals.folder_added.emit(
-            event.folder_path,
+            str(event.folder_path),
             event.enabled)
 
     def _on_folder_removed(self, event: FolderRemoved):
