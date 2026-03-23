@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 
 from iteradraw.pyside.pyside_shell import PySideShell
 from iteradraw.pyside.viewmodels.folder_group_viewmodel import (
-    FolderGroupViewModel,
+    FolderGroupViewModel, FolderGroupItem,
 )
 
 """
@@ -242,13 +242,15 @@ class FolderGroupView(QTreeView):
         """
         Builds and shows the correct context menu on the fly.
         """
+        item = None
         index = self.indexAt(position)
+        if index.isValid():
+            item = self.model.itemFromIndex(index)
         menu = QMenu()
 
         # Case 1: Clicked on group or empty space
         if (
-            not index.isValid()
-                or not self.model.itemFromIndex(index).hasChildren()
+                not index.isValid() or isinstance(item, FolderGroupItem)
         ):
             self._add_action(
                 menu,
@@ -268,7 +270,6 @@ class FolderGroupView(QTreeView):
 
         # Case 2: Clicked on a child folder
         else:
-            item = self.model.itemFromIndex(index)
             self._add_action(
                 menu,
                 "Remove folder",
