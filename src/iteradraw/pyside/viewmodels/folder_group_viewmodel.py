@@ -101,7 +101,7 @@ class FolderGroupViewModel(QStandardItemModel):
         Slot for itemChanged signal.
 
         Behavior:
-            -Evaluates whether checkbox belogns to parent or child widget.
+            -Evaluates whether checkbox belongs to parent or child widget.
                 -Parent: aligns all children to parent new state.
                 -Child: evaluates new parent state based on all siblings.
         """
@@ -146,11 +146,14 @@ class FolderGroupViewModel(QStandardItemModel):
             folder_path: str,
             enabled: bool) -> None:
         parent_item = self.invisibleRootItem().child(0)
+        folder_item = FolderItem(
+            folder_path,
+            enabled
+        )
         parent_item.appendRow(
-            FolderItem(
-                folder_path,
-                enabled
-            ))
+            folder_item
+        )
+        self.itemChanged.emit(folder_item)
 
     @Slot()
     def on_folder_removed_from_folderset(self, folder_path: str) -> None:
