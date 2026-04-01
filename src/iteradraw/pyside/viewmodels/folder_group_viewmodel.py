@@ -14,8 +14,9 @@ Viewmodel for the FolderGroupView GUI component.
 """
 
 class FolderGroupViewModel(QStandardItemModel):
-    def __init__(self, shell: PySideShell, parent):
+    def __init__(self, shell: PySideShell, parent, folderset_id: int):
         super().__init__(parent)
+        self.id = folderset_id
         self.view = parent
         self.shell = shell
         self.is_handling_change = False
@@ -24,7 +25,7 @@ class FolderGroupViewModel(QStandardItemModel):
     def populate(self, folderset) -> None:
         self.itemChanged.disconnect(self.on_checkbox_changed)
         group = FolderGroupItem(
-            folderset_id=folderset.id, group_name=folderset.display_name
+            group_name=folderset.display_name
         )
         self.invisibleRootItem().appendRow(group)
         for f in folderset.all:
@@ -54,12 +55,9 @@ class FolderGroupViewModel(QStandardItemModel):
     @Slot()
     def on_add_folder_to_group(self) -> None:
         """ """
-        parent_item = self.invisibleRootItem().child(0)
-        index = parent_item.index()
-        folderset_id = self.data(index, Qt.ItemDataRole.UserRole)
         folder_path = QFileDialog().getExistingDirectory()
         if folder_path:
-            self.shell.add_folder(folderset_id, folder_path)
+            self.shell.add_folder(self.id, folder_path)
 
     @Slot()
     def on_open_folder_from_group(self, item) -> None:
@@ -70,30 +68,21 @@ class FolderGroupViewModel(QStandardItemModel):
         if self._confirm_delete(
             "Would you like to remove this folder from this group?"
         ):
-            parent_item = self.invisibleRootItem().child(0)
-            index = parent_item.index()
-            folderset_id = self.data(index, Qt.ItemDataRole.UserRole)
             folder_path = item.text()
-            self.shell.remove_folder(folderset_id, folder_path)
+            self.shell.remove_folder(self.id, folder_path)
 
     @Slot()
     def on_rename_folder_group(self) -> None:
-        parent_item = self.invisibleRootItem().child(0)
-        index = parent_item.index()
-        folderset_id = self.data(index, Qt.ItemDataRole.UserRole)
         name, ok = QInputDialog().getText(self.view, "New name:", "")
         if name and ok:
-            self.shell.rename_folderset(folderset_id, name)
+            self.shell.rename_folderset(self.id, name)
 
     @Slot()
     def on_delete_folder_group(self) -> None:
         if self._confirm_delete(
             "Would you like to permanently delete this group?"
         ):
-            parent_item = self.invisibleRootItem().child(0)
-            index = parent_item.index()
-            folderset_id = self.data(index, Qt.ItemDataRole.UserRole)
-            self.shell.delete_folderset(folderset_id=folderset_id)
+            self.shell.delete_folderset(folderset_id=self.id)
 
     @Slot()
     def on_checkbox_changed(self, item: QStandardItem) -> None:
@@ -116,7 +105,7 @@ class FolderGroupViewModel(QStandardItemModel):
                     check_state=new_state,
                 )
                 self.shell.set_all_folders_enabled(
-                    folderset_id=item.data(Qt.ItemDataRole.UserRole),
+                    folderset_id=self.id,
                     enabled=(Qt.CheckState.Checked == new_state),
                 )
             else:
@@ -124,7 +113,7 @@ class FolderGroupViewModel(QStandardItemModel):
                 new_state = self._calculate_state_for_parent(parent=parent)
                 parent.setCheckState(new_state)
                 self.shell.set_folderset_enabled(
-                    folderset_id=parent.data(Qt.ItemDataRole.UserRole),
+                    folderset_id=self.id,
                     folder_path=item.text(),
                     enabled=(Qt.CheckState.Checked == item.checkState()),
                 )
@@ -143,8 +132,11 @@ class FolderGroupViewModel(QStandardItemModel):
     @Slot()
     def on_folder_added_to_folderset(
             self,
+            folderset_id: int,
             folder_path: str,
             enabled: bool) -> None:
+        if self.id is not folderset_id:
+            return
         parent_item = self.invisibleRootItem().child(0)
         folder_item = FolderItem(
             folder_path,
@@ -156,7 +148,13 @@ class FolderGroupViewModel(QStandardItemModel):
         self.itemChanged.emit(folder_item)
 
     @Slot()
-    def on_folder_removed_from_folderset(self, folder_path: str) -> None:
+    def on_folder_removed_from_folderset(
+            self,
+            folderset_id: int,
+            folder_path: str,
+    ) -> None:
+        if self.id is not folderset_id:
+            return
         parent_item = self.invisibleRootItem().child(0)
         for child_row in range(parent_item.rowCount()):
             child_item = parent_item.child(child_row)
@@ -166,7 +164,12 @@ class FolderGroupViewModel(QStandardItemModel):
             return
 
     @Slot()
-    def on_folderset_renamed(self, name: str) -> None:
+    def on_folderset_renamed(
+            self,
+            folderset_id: int,
+            name: str) -> None:
+        if self.id is not folderset_id:
+            return
         parent_item = self.invisibleRootItem().child(0)
         parent_item.setText(name)
 
@@ -216,17 +219,13 @@ class FolderGroupViewModel(QStandardItemModel):
 
 
 class FolderGroupItem(QStandardItem):
-    def __init__(self, folderset_id, group_name):
+    def __init__(self, group_name):
         super().__init__(group_name)
         self.setDropEnabled(True)
         self.setDragEnabled(False)
         self.setCheckable(True)
         self.setAutoTristate(True)
         self.setEditable(False)
-        self.setData(
-            folderset_id,
-            Qt.ItemDataRole.UserRole,
-        )
 
 
 class FolderItem(QStandardItem):

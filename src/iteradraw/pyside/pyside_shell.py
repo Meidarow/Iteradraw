@@ -10,9 +10,9 @@ from iteradraw.interfaces import UnitOfWorkFactory
 
 class PySideShell(ApplicationShell):
     class Signals(QObject):
-        folder_added: Signal = Signal(str, bool)
-        folder_removed: Signal = Signal(str)
-        folderset_renamed: Signal = Signal(str)
+        folder_added: Signal = Signal(int, str, bool)
+        folder_removed: Signal = Signal(int, str)
+        folderset_renamed: Signal = Signal(int, str)
         folderset_deleted: Signal = Signal(int)
         folderset_created: Signal = Signal(int)
 
@@ -107,11 +107,13 @@ class PySideShell(ApplicationShell):
 
     def _on_folder_added(self, event: FolderAdded):
         self.signals.folder_added.emit(
+            event.folderset_id,
             str(event.folder_path),
             event.enabled)
 
     def _on_folder_removed(self, event: FolderRemoved):
         self.signals.folder_removed.emit(
+            event.folderset_id,
             event.folder_path,
         )
 
@@ -127,5 +129,6 @@ class PySideShell(ApplicationShell):
 
     def _on_folderset_renamed(self, event: FolderSetRenamed):
         self.signals.folderset_renamed.emit(
+            event.folderset_id,
             event.name,
         )

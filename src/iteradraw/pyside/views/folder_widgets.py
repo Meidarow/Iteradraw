@@ -125,7 +125,7 @@ class FolderPanelView(QStackedWidget):
     def on_folderset_created(self, folderset_id: int) -> None:
         folder_group = FolderGroupView()
         vm = FolderGroupViewModel(
-            self.shell, folder_group
+            self.shell, folder_group, folderset_id
         )
         folder_group.assign_viewmodel_and_build(vm)
         vm.populate(self.shell.fetch_folderset(folderset_id))
@@ -194,7 +194,7 @@ class FolderGroupView(QTreeView):
         """
         Handles all reusable UI building implementation.
 
-        Core Responsabilites:
+        Core Responsibilities:
             -Create/Configure tree view UI parameters.
             -Install the tree view into parent.
         """
