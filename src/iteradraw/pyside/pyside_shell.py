@@ -114,7 +114,7 @@ class PySideShell(ApplicationShell):
     def _on_folder_removed(self, event: FolderRemoved):
         self.signals.folder_removed.emit(
             event.folderset_id,
-            event.folder_path,
+            str(event.folder_path),
         )
 
     def _on_folderset_deleted(self, event: FolderSetDeleted):

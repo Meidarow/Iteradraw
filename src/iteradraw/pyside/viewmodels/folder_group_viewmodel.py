@@ -158,9 +158,10 @@ class FolderGroupViewModel(QStandardItemModel):
         parent_item = self.invisibleRootItem().child(0)
         for child_row in range(parent_item.rowCount()):
             child_item = parent_item.child(child_row)
-            if not child_item.text() == folder_path:
+            child_path = child_item.text()
+            if not child_path == folder_path:
                 continue
-            parent_item.removeRow(child_row)
+            parent_item.takeRow(child_row)
             return
 
     @Slot()
