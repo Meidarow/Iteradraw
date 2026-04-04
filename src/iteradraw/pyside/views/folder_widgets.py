@@ -316,7 +316,7 @@ class FolderGroupView(QTreeView):
         """Called when tree expands/collapses - trigger resize"""
         self.updateGeometry()  # Tells parent layout to recalculate
 
-    def on_expansion_changed(self, index):
+    def on_expansion_changed(self):
         """
         Forces the parent layout to re-calculate our size.
         """
