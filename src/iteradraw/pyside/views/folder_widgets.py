@@ -126,11 +126,7 @@ class FolderPanelView(QStackedWidget):
     def on_folderset_removed(self, folderset_id: int) -> None:
         for index in range(self.content.count()):
             widget = self.content.itemAt(index).widget()
-            if not isinstance(widget, FolderGroupView):
-                continue
-            root_item = widget.model.invisibleRootItem().child(0)
-            widget_id = root_item.data(Qt.ItemDataRole.UserRole)
-            if not widget_id == folderset_id:
+            if not widget.model.id == folderset_id:
                 continue
             self.content.removeWidget(widget)
             widget.deleteLater()
