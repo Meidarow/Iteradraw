@@ -17,7 +17,7 @@ class ApplicationShell:
             self,
             command_bus: CommandBus,
             event_bus: EventBus,
-            uow_factory: UnitOfWorkFactory,
+            uow_factory: UnitOfWorkFactory
     ):
         self.command_bus = command_bus
         self.event_bus = event_bus
@@ -110,6 +110,11 @@ class ApplicationShell:
         with self.uow_factory() as uow:
             folderset = uow.folder_repo.get_folderset(folderset_id)
         return folderset
+
+    def fetch_all_foldersets(self) -> list[FolderSet]:
+        with self.uow_factory() as uow:
+            foldersets = uow.folder_repo.get_foldersets()
+        return foldersets
 
     def fetch_session_statistics(self):
         raise NotImplementedError

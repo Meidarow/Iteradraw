@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QAbstractScrollArea,
 )
 
+from iteradraw.core.domain.models.folder import FolderSet
 from iteradraw.pyside.pyside_shell import PySideShell
 from iteradraw.pyside.viewmodels.folder_group_viewmodel import (
     FolderGroupViewModel, FolderGroupItem,
@@ -75,6 +76,21 @@ class FolderPanelView(QStackedWidget):
         self.content = self._ui.content.layout()
         self._bind_signals()
 
+    def load_data(self) -> None:
+        """
+        Loads previous folders from database.
+
+        This method queries each folderset's content twice, which could be
+        resolved by creating a method that returns all folderset IDs instead
+        of foldersets directly as is the case with fetch_all_foldersets.
+        """
+        # grabs a list of all FolderSets
+        for folderset in self.shell.fetch_all_foldersets():
+            # grabs each folderset individually
+            folder_group = self._build_folder_group(folderset)
+            self.content.addWidget(folder_group)
+        self._set_current_top_panel()
+
     def _bind_signals(self) -> None:
         self.customContextMenuRequested.connect(self.on_context_menu_requested)
 
@@ -123,12 +139,8 @@ class FolderPanelView(QStackedWidget):
 
     @Slot()
     def on_folderset_created(self, folderset_id: int) -> None:
-        folder_group = FolderGroupView()
-        vm = FolderGroupViewModel(
-            self.shell, folder_group, folderset_id
-        )
-        folder_group.assign_viewmodel_and_build(vm)
-        vm.populate(self.shell.fetch_folderset(folderset_id))
+        folderset = self.shell.fetch_folderset(folderset_id)
+        folder_group = self._build_folder_group(folderset)
         self.content.addWidget(folder_group)
         self._set_current_top_panel()
 
@@ -147,6 +159,18 @@ class FolderPanelView(QStackedWidget):
     # =============================================================================
     # Private Helpers:
     # =============================================================================
+
+    def _build_folder_group(self, folderset: FolderSet) -> FolderGroupView:
+        folder_group = FolderGroupView()
+        vm = FolderGroupViewModel(
+            self.shell,
+            folder_group,
+            folderset.id
+        )
+        folder_group.assign_viewmodel_and_build(vm)
+        vm.populate(folderset)
+        return folder_group
+
     @staticmethod
     def _add_action(menu: QMenu, text: str, slot) -> None:
         """

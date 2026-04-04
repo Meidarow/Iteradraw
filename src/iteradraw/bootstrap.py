@@ -11,13 +11,15 @@ from iteradraw.core.application.handlers.folder_handlers import \
     SetAllFoldersEnabledCommandHandler, \
     MoveFolderBetweenFolderSetsCommandHandler
 from iteradraw.core.application.shell import ApplicationShell
+from iteradraw.core.domain.repositories.folder_repository import \
+    SQLite3FolderRepository
 from iteradraw.core.infrastructure.buses.command_bus import CommandBus
 from iteradraw.core.infrastructure.persistence.schema import SCHEMA
 from iteradraw.core.infrastructure.persistence.sqlite3_database import \
     SQLite3Database
 from iteradraw.core.infrastructure.persistence.unit_of_work import \
     SQLite3UnitOfWorkFactory
-from iteradraw.interfaces import UnitOfWorkFactory, Database
+from iteradraw.interfaces import UnitOfWorkFactory, Database, FolderRepository
 from iteradraw.log_config import configure_logger
 from iteradraw.pyside.main_window import MainWindow
 from iteradraw.pyside.pyside_shell import PySideShell
@@ -91,8 +93,9 @@ def register_command_handlers(
         )
 
 def register_default_concrete_classes(container: DependencyContainer) -> None:
-    container.default_concretes[UnitOfWorkFactory]=SQLite3UnitOfWorkFactory
+    container.default_concretes[UnitOfWorkFactory] = SQLite3UnitOfWorkFactory
     container.default_concretes[ApplicationShell] = PySideShell
+    container.default_concretes[FolderRepository] = SQLite3FolderRepository
 
 if __name__ == "__main__":
     logger.info("Application started")

@@ -7,6 +7,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QFileDialog, QInputDialog
 
+from iteradraw.core.domain.models.folder import FolderSet
 from iteradraw.pyside.pyside_shell import PySideShell
 
 """
@@ -22,7 +23,7 @@ class FolderGroupViewModel(QStandardItemModel):
         self.is_handling_change = False
         self.bind_signals()
 
-    def populate(self, folderset) -> None:
+    def populate(self, folderset: FolderSet) -> None:
         self.itemChanged.disconnect(self.on_checkbox_changed)
         group = FolderGroupItem(
             group_name=folderset.display_name

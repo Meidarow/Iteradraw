@@ -60,6 +60,10 @@ class Database(ABC):
         ...
 
     @abstractmethod
+    def executescript(self, query):
+        ...
+
+    @abstractmethod
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         ...
 
