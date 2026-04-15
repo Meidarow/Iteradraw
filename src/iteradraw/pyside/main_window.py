@@ -1,7 +1,11 @@
-from PySide6.QtWidgets import QMainWindow, QFileDialog, QTabWidget
+from PySide6 import QtWidgets
+from PySide6.QtWidgets import QMainWindow, QFileDialog, QTabWidget, \
+    QStackedLayout, QWidget
 
 from iteradraw.pyside.pyside_shell import PySideShell
-from iteradraw.pyside.views.tabs_views import SlideshowControlTab, SettingsTab
+from iteradraw.pyside.views.slideshow_widgets import ImageViewerWidget
+from iteradraw.pyside.views.tabs_views import (SlideshowControlTab,
+                                               SettingsTab)
 
 
 class MainWindow(QMainWindow):
@@ -42,8 +46,13 @@ class MainWindow(QMainWindow):
         settings_tab = SettingsTab()
 
         self.screens = QStackedLayout(self)
+        image_viewer = ImageViewerWidget(self, self.shell)
+
+        # placeholder for testing
+        image_viewer.set_image("/Users/gabriel/Desktop/testimages/0004.jpg")
 
         self.screens.insertWidget(0, self.tabs)
+        self.screens.insertWidget(1, image_viewer)
 
         self.screens.setCurrentIndex(0)
 
