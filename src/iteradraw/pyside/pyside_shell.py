@@ -9,12 +9,14 @@ from iteradraw.interfaces import UnitOfWorkFactory
 
 
 class PySideShell(ApplicationShell):
-    class Signals(QObject):
+    class _Signals(QObject):
         folder_added: Signal = Signal(int, str, bool)
         folder_removed: Signal = Signal(int, str)
         folderset_renamed: Signal = Signal(int, str)
         folderset_deleted: Signal = Signal(int)
         folderset_created: Signal = Signal(int)
+        slideshow_prepared: Signal = Signal(bool)
+        slideshow_finished: Signal = Signal()  # last session ID for hot-continue
 
     def __init__(
             self,
@@ -23,7 +25,7 @@ class PySideShell(ApplicationShell):
             uow_factory: UnitOfWorkFactory
     ):
         super().__init__(command_bus, event_bus, uow_factory)
-        self.signals = self.Signals()
+        self.signals = self._Signals()
         self._connect_signals()
 
     def add_folder(
