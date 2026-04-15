@@ -16,6 +16,7 @@ class SidePanelView(QGroupBox):
         self.shell = shell
         self._form = None
         self._build()
+        self._bind_signals()
 
     def _build(self):
         self._form = QFormLayout()
@@ -28,6 +29,12 @@ class SidePanelView(QGroupBox):
         self._form.addRow("Shuffle:", self._shuffle_checkbox)
         self._form.addRow(self._start_button)
         self.setLayout(self._form)
+
+    def _bind_signals(self):
+        self._start_button.pressed.connect(lambda: self.shell.start_slideshow(
+            timer=self._timer_field.value(),
+            shuffle=self._shuffle_checkbox.isChecked()
+        ))
 
 
 class TimerSelectionView(QWidget):
