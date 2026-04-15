@@ -10,6 +10,8 @@ from iteradraw.core.application.handlers.folder_handlers import \
     AddFolderSetCommandHandler, SetFolderEnabledCommandHandler, \
     SetAllFoldersEnabledCommandHandler, \
     MoveFolderBetweenFolderSetsCommandHandler
+from iteradraw.core.application.handlers.slideshow_handlers import \
+    StartTimedSlideshowCommandHandler
 from iteradraw.core.application.shell import ApplicationShell
 from iteradraw.core.domain.repositories.folder_repository import \
     SQLite3FolderRepository
@@ -42,6 +44,8 @@ ALL_HANDLERS = [
     SetFolderEnabledCommandHandler,
     SetAllFoldersEnabledCommandHandler,
     MoveFolderBetweenFolderSetsCommandHandler,
+    StartTimedSlideshowCommandHandler,
+
 ]
 
 logger = logging.getLogger("iteradraw.bootstrap")
