@@ -27,24 +27,33 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.shell = shell
         self.file_dialog = None
+        self.container = QWidget()
         self._build()
         self._configure_window()
 
     def _build(self):
+        self.setCentralWidget(self.container)
         self.file_dialog = QFileDialog()
-        tabs = QTabWidget()
-        main_tab = SlideshowControlTab(
-            shell=self.shell,
-        )
+        self.tabs = QTabWidget(self)
+        self.tabs.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding,
+            QtWidgets.QSizePolicy.Policy.Expanding)
+        main_tab = SlideshowControlTab(shell=self.shell)
         settings_tab = SettingsTab()
 
-        # add tabs in display order
-        tabs.addTab(settings_tab, "⚙")
-        tabs.addTab(main_tab, "Slideshow")
+        self.screens = QStackedLayout(self)
+
+        self.screens.insertWidget(0, self.tabs)
+
+        self.screens.setCurrentIndex(0)
+
+        # add self.tabs in display order
+        self.tabs.addTab(settings_tab, "⚙")
+        self.tabs.addTab(main_tab, "Slideshow")
 
         # define focused tab (index starts at 0, default is first added)
-        tabs.setCurrentIndex(1)
-        self.setCentralWidget(tabs)
+        self.tabs.setCurrentIndex(1)
+        self.container.setLayout(self.screens)
 
     def _configure_window(self):
         self.setWindowTitle("Showcase: FolderGroupView")
