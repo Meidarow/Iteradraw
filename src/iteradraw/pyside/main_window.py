@@ -25,12 +25,16 @@ class MainWindow(QMainWindow):
 
     def __init__(self, shell: PySideShell):
         super().__init__()
-        self.setWindowTitle("Showcase: FolderGroupView")
-        self.resize(960, 540)
+        self.shell = shell
+        self.file_dialog = None
+        self._build()
+        self._configure_window()
+
+    def _build(self):
         self.file_dialog = QFileDialog()
         tabs = QTabWidget()
         main_tab = SlideshowControlTab(
-            shell=shell,
+            shell=self.shell,
         )
         settings_tab = SettingsTab()
 
@@ -41,3 +45,7 @@ class MainWindow(QMainWindow):
         # define focused tab (index starts at 0, default is first added)
         tabs.setCurrentIndex(1)
         self.setCentralWidget(tabs)
+
+    def _configure_window(self):
+        self.setWindowTitle("Showcase: FolderGroupView")
+        self.resize(960, 540)
