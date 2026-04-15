@@ -34,6 +34,7 @@ class MainWindow(QMainWindow):
         self.container = QWidget()
         self._build()
         self._configure_window()
+        self._bind_signals()
 
     def _build(self):
         self.setCentralWidget(self.container)
@@ -67,3 +68,13 @@ class MainWindow(QMainWindow):
     def _configure_window(self):
         self.setWindowTitle("Showcase: FolderGroupView")
         self.resize(960, 540)
+
+    def _bind_signals(self):
+        self.shell.signals.slideshow_prepared.connect(self.show_slideshow)
+        self.shell.signals.slideshow_finished.connect(self.hide_slideshow)
+
+    def show_slideshow(self):
+        self.screens.setCurrentIndex(1)
+
+    def hide_slideshow(self):
+        self.screens.setCurrentIndex(0)
