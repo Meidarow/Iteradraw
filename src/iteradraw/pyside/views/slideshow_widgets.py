@@ -27,6 +27,7 @@ class ImageViewerWidget(QWidget):
         - Zoom: User can change scale incrementally via mouse-wheel and + or -;
         - Translation: User can drag the image at any scale with the left mouse
         button pressed;
+        - Terminate: User can close the slideshow.
 
     Context menu actions:
         - Open image in file explorer;
@@ -74,3 +75,8 @@ class ImageViewerWidget(QWidget):
 
     def _scale_image(self, width, height):
         pass
+
+    def keyPressEvent(self, event, /):
+        if event.key() == Qt.Key.Key_Escape:
+            event.accept()
+            self._shell.signals.slideshow_finished.emit()
