@@ -59,9 +59,9 @@ def main() -> None:
     handler_instances = build_command_handlers(container)
     register_command_handlers(command_bus, handler_instances)
 
-    shell = container.resolve(PySideShell)
+    shell = container.resolve(ApplicationShell)
     app = QtWidgets.QApplication(sys.argv)
-    gui = MainWindow(shell=shell)
+    gui = MainWindow(PySideShell(shell))
     gui.show()
     sys.exit(app.exec())
 
@@ -94,7 +94,6 @@ def register_command_handlers(
 
 def register_default_concrete_classes(container: DependencyContainer) -> None:
     container.default_concretes[UnitOfWorkFactory] = SQLite3UnitOfWorkFactory
-    container.default_concretes[ApplicationShell] = PySideShell
     container.default_concretes[FolderRepository] = SQLite3FolderRepository
 
 if __name__ == "__main__":

@@ -3,12 +3,10 @@ from PySide6.QtCore import Signal, QObject
 from iteradraw.core.application.shell import ApplicationShell
 from iteradraw.core.domain.events.folder_events import FolderAdded, \
     FolderRemoved, FolderSetRenamed, FolderSetDeleted, FolderSetCreated
-from iteradraw.core.infrastructure.buses.command_bus import CommandBus
-from iteradraw.core.infrastructure.buses.event_bus import EventBus
-from iteradraw.interfaces import UnitOfWorkFactory
+from iteradraw.core.domain.models.folder import FolderSet
 
 
-class PySideShell(ApplicationShell):
+class PySideShell:
     class _Signals(QObject):
         folder_added: Signal = Signal(int, str, bool)
         folder_removed: Signal = Signal(int, str)
@@ -20,13 +18,28 @@ class PySideShell(ApplicationShell):
 
     def __init__(
             self,
-            command_bus: CommandBus,
-            event_bus: EventBus,
-            uow_factory: UnitOfWorkFactory
+            shell: ApplicationShell
     ):
-        super().__init__(command_bus, event_bus, uow_factory)
+        self._shell = shell
         self.signals = self._Signals()
         self._connect_signals()
+
+    # Command API
+    def start_slideshow(self, timer: int, shuffle: bool):
+        self.signals.slideshow_prepared.emit(True)
+        self._shell.start_slideshow(timer, shuffle)
+
+    def next_timed_slide(self):
+        raise NotImplementedError
+
+    def previous_timed_slide(self):
+        raise NotImplementedError
+
+    def next_slide(self):
+        raise NotImplementedError
+
+    def previous_slide(self):
+        raise NotImplementedError
 
     def add_folder(
         self, 
@@ -34,50 +47,50 @@ class PySideShell(ApplicationShell):
         folder_path: str, 
         enabled: bool = True
     ):
-        super().add_folder(
+        self._shell.add_folder(
             folderset_id=folderset_id,
             folder_path=folder_path,
             enabled=enabled
         )
 
     def remove_folder(self, folderset_id: int, folder_path: str):
-        super().remove_folder(
+        self._shell.remove_folder(
             folderset_id=folderset_id,
             folder_path=folder_path,
         )
 
     def rename_folderset(self, folderset_id: int, name: str):
-        super().rename_folderset(
+        self._shell.rename_folderset(
             folderset_id=folderset_id,
             name=name,
         )
 
     def add_folderset(self, name: str):
-        super().add_folderset(
+        self._shell.add_folderset(
             name=name
         )
 
     def delete_folderset(self, folderset_id: int):
-        super().delete_folderset(
+        self._shell.delete_folderset(
             folderset_id=folderset_id,
         )
 
     def set_folderset_enabled(self, folderset_id: int, folder_path: str,
                               enabled: bool):
-        super().set_folderset_enabled(
+        self._shell.set_folderset_enabled(
             folderset_id=folderset_id,
             folder_path= folder_path,
             enabled= enabled,
         )
 
     def set_all_folders_enabled(self, folderset_id: int, enabled: bool):
-        super().set_all_folders_enabled(
+        self._shell.set_all_folders_enabled(
             folderset_id=folderset_id,
             enabled= enabled,
         )
 
     def move_folder(self, origin_id, destination_id, folder_path: str):
-        super().move_folder(
+        self._shell.move_folder(
             origin_id=origin_id,
             destination_id=destination_id,
             folder_path=folder_path,
@@ -86,23 +99,23 @@ class PySideShell(ApplicationShell):
     # Pyside signals
 
     def _connect_signals(self) -> None:
-        self.event_bus.subscribe(
+        self._shell.event_bus.subscribe(
             event_type=FolderAdded,
             listener=self._on_folder_added,
         )
-        self.event_bus.subscribe(
+        self._shell.event_bus.subscribe(
             event_type=FolderRemoved,
             listener=self._on_folder_removed,
         )
-        self.event_bus.subscribe(
+        self._shell.event_bus.subscribe(
             event_type=FolderSetRenamed,
             listener=self._on_folderset_renamed,
         )
-        self.event_bus.subscribe(
+        self._shell.event_bus.subscribe(
             event_type=FolderSetDeleted,
             listener=self._on_folderset_deleted,
         )
-        self.event_bus.subscribe(
+        self._shell.event_bus.subscribe(
             event_type=FolderSetCreated,
             listener=self._on_folderset_created,
         )
@@ -134,3 +147,22 @@ class PySideShell(ApplicationShell):
             event.folderset_id,
             event.name,
         )
+
+    # Query API
+
+    def fetch_folderset(self, folderset_id: int) -> FolderSet:
+        return self._shell.fetch_folderset(
+            folderset_id=folderset_id,
+        )
+
+    def fetch_all_foldersets(self) -> list[FolderSet]:
+        return self._shell.fetch_all_foldersets()
+
+    def fetch_session_statistics(self):
+        raise NotImplementedError
+
+    def fetch_session_images(self):
+        raise NotImplementedError
+
+    def fetch_tags(self):
+        raise NotImplementedError
