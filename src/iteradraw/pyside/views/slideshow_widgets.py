@@ -2,6 +2,7 @@ from PySide6.QtCore import Slot, Qt, QPointF
 from PySide6.QtGui import QPainter, QPixmap, QPalette, QColor
 from PySide6.QtWidgets import QWidget
 
+from iteradraw.pyside.pyside_shell import PySideShell
 
 
 class ImageViewerWidget(QWidget):
@@ -26,16 +27,17 @@ class ImageViewerWidget(QWidget):
         - Zoom: User can change scale incrementally via mouse-wheel and + or -;
         - Translation: User can drag the image at any scale with the left mouse
         button pressed;
+        - Terminate: User can close the slideshow.
 
     Context menu actions:
         - Open image in file explorer;
         - Show image in containing folder;
     """
 
-    def __init__(self, /, parent=None, cache = "ICache"):
+    def __init__(self, /, parent=None, shell: PySideShell = None):
         super().__init__(parent)
+        self._shell = shell
         self._scale_factor = 1
-        self.cache = cache
         self.palette = QPalette()
         self.palette.setColor(QPalette.ColorRole.Window, QColor(0, 0, 0))
         self.setPalette(self.palette)
@@ -54,9 +56,12 @@ class ImageViewerWidget(QWidget):
         self._update_vertex()
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-        painter.drawPixmap(self._vertex, self._image.scaled(self.rect().size(),
-                                                            aspectMode=Qt.AspectRatioMode.KeepAspectRatio,
-                                                            mode =Qt.TransformationMode.SmoothTransformation))
+        painter.drawPixmap(self._vertex, self._image.scaled(
+            self.rect().size(),
+            aspectMode=Qt.AspectRatioMode.KeepAspectRatio,
+            mode=Qt.TransformationMode.SmoothTransformation
+        ))
+        painter.end()
 
     def _update_vertex(self):
         """
@@ -70,3 +75,8 @@ class ImageViewerWidget(QWidget):
 
     def _scale_image(self, width, height):
         pass
+
+    def keyPressEvent(self, event, /):
+        if event.key() == Qt.Key.Key_Escape:
+            event.accept()
+            self._shell.signals.slideshow_finished.emit()

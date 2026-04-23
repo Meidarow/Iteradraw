@@ -41,7 +41,9 @@ class AddFolderCommandHandler(CommandHandler[AddFolderCommand]):
         event_bus: EventBus
     """
     command_type = AddFolderCommand
-    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
+
+    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus,
+                 **_):
         self.uow_factory = uow_factory
         self.event_bus = event_bus
 
@@ -73,7 +75,9 @@ class RemoveFolderCommandHandler(CommandHandler[RemoveFolderCommand]):
         event_bus: EventBus
     """
     command_type = RemoveFolderCommand
-    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
+
+    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus,
+                 **_):
         self.uow_factory = uow_factory
         self.event_bus = event_bus
 
@@ -100,7 +104,9 @@ class RenameFolderSetCommandHandler(CommandHandler[RenameFolderSetCommand]):
         event_bus: EventBus
     """
     command_type = RenameFolderSetCommand
-    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
+
+    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus,
+                 **_):
         self.uow_factory = uow_factory
         self.event_bus = event_bus
 
@@ -128,7 +134,9 @@ class AddFolderSetCommandHandler(CommandHandler[AddFolderSetCommand]):
         event_bus: EventBus
     """
     command_type = AddFolderSetCommand
-    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
+
+    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus,
+                 **_):
         self.uow_factory = uow_factory
         self.event_bus = event_bus
 
@@ -155,7 +163,9 @@ class DeleteFolderSetCommandHandler(CommandHandler[DeleteFolderSetCommand]):
         event_bus: EventBus
     """
     command_type = DeleteFolderSetCommand
-    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
+
+    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus,
+                 **_):
         self.uow_factory = uow_factory
         self.event_bus = event_bus
 
@@ -180,7 +190,9 @@ class SetFolderEnabledCommandHandler(CommandHandler[SetFolderEnabledCommand]):
         event_bus: EventBus
     """
     command_type = SetFolderEnabledCommand
-    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
+
+    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus,
+                 **_):
         self.uow_factory = uow_factory
         self.event_bus = event_bus
 
@@ -212,7 +224,9 @@ class SetAllFoldersEnabledCommandHandler(CommandHandler[SetAllFoldersEnabledComm
         event_bus: EventBus
     """
     command_type = SetAllFoldersEnabledCommand
-    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
+
+    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus,
+                 **_):
         self.uow_factory = uow_factory
         self.event_bus = event_bus
 
@@ -256,7 +270,8 @@ class MoveFolderBetweenFolderSetsCommandHandler(CommandHandler[MoveFolderBetween
     """
     command_type = MoveFolderBetweenFolderSetsCommand
 
-    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus):
+    def __init__(self, uow_factory: UnitOfWorkFactory, event_bus: EventBus,
+                 **_):
         self.uow_factory = uow_factory
         self.event_bus = event_bus
 

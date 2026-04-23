@@ -29,20 +29,21 @@ class SlideshowControlTab(QWidget):
 
     def __init__(self, shell: PySideShell):
         super().__init__()
-        horizontal_splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.folder_panel = FolderPanelView(
-            shell=shell,
-        )
-        sidebar_panel = SidePanelView()
+        self.shell = shell
+        self._build()
 
-        horizontal_splitter.addWidget(self.folder_panel)
+    def _build(self):
+        horizontal_splitter = QSplitter(Qt.Orientation.Horizontal)
+        folder_panel = FolderPanelView(shell=self.shell)
+        sidebar_panel = SidePanelView(shell=self.shell)
+
+        horizontal_splitter.addWidget(folder_panel)
         horizontal_splitter.addWidget(sidebar_panel)
         horizontal_splitter.setStretchFactor(0, 12)
         horizontal_splitter.setStretchFactor(1, 1)
 
         main_layout = QVBoxLayout(self)
         main_layout.addWidget(horizontal_splitter)
-        self.folder_panel.load_data()
 
 
 class SettingsTab(QWidget):

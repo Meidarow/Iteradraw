@@ -10,6 +10,8 @@ from iteradraw.core.application.handlers.folder_handlers import \
     AddFolderSetCommandHandler, SetFolderEnabledCommandHandler, \
     SetAllFoldersEnabledCommandHandler, \
     MoveFolderBetweenFolderSetsCommandHandler
+from iteradraw.core.application.handlers.slideshow_handlers import \
+    StartTimedSlideshowCommandHandler
 from iteradraw.core.application.shell import ApplicationShell
 from iteradraw.core.domain.repositories.folder_repository import \
     SQLite3FolderRepository
@@ -42,6 +44,8 @@ ALL_HANDLERS = [
     SetFolderEnabledCommandHandler,
     SetAllFoldersEnabledCommandHandler,
     MoveFolderBetweenFolderSetsCommandHandler,
+    StartTimedSlideshowCommandHandler,
+
 ]
 
 logger = logging.getLogger("iteradraw.bootstrap")
@@ -59,9 +63,9 @@ def main() -> None:
     handler_instances = build_command_handlers(container)
     register_command_handlers(command_bus, handler_instances)
 
-    shell = container.resolve(PySideShell)
+    shell = container.resolve(ApplicationShell)
     app = QtWidgets.QApplication(sys.argv)
-    gui = MainWindow(shell=shell)
+    gui = MainWindow(PySideShell(shell))
     gui.show()
     sys.exit(app.exec())
 
@@ -94,7 +98,6 @@ def register_command_handlers(
 
 def register_default_concrete_classes(container: DependencyContainer) -> None:
     container.default_concretes[UnitOfWorkFactory] = SQLite3UnitOfWorkFactory
-    container.default_concretes[ApplicationShell] = PySideShell
     container.default_concretes[FolderRepository] = SQLite3FolderRepository
 
 if __name__ == "__main__":

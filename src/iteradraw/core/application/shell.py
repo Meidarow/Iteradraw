@@ -5,6 +5,8 @@ from iteradraw.core.application.commands.folder_commands import \
     SetFolderEnabledCommand, SetAllFoldersEnabledCommand, \
     MoveFolderBetweenFolderSetsCommand, DeleteFolderSetCommand, \
     AddFolderSetCommand
+from iteradraw.core.application.commands.slideshow_commands import \
+    StartTimedSlideshowCommand
 from iteradraw.core.domain.models.folder import FolderSet
 from iteradraw.core.infrastructure.buses.command_bus import CommandBus
 from iteradraw.core.infrastructure.buses.event_bus import EventBus
@@ -30,6 +32,9 @@ class ApplicationShell:
         raise NotImplementedError
 
 # Command API
+    def start_slideshow(self, timer: int, shuffle: bool):
+        cmd = StartTimedSlideshowCommand(timer, shuffle)
+        self.command_bus.dispatch(cmd)
 
     def next_timed_slide(self):
         raise NotImplementedError

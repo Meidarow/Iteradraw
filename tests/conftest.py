@@ -101,11 +101,15 @@ def mock_bootstrap(
         mock_event_bus,
         mock_command_bus,
 ) -> SimpleNamespace:
+    kwargs = {
+        "uow_factory": sqlite_unit_of_work_factory,
+        "event_bus": mock_event_bus,
+    }
     handler_instances = {}
     for handler_class in ALL_HANDLERS:
         handler_instances.setdefault(
             handler_class,
-            handler_class(sqlite_unit_of_work_factory, mock_event_bus)
+            handler_class(**kwargs)
         )
     register_command_handlers(mock_command_bus, handler_instances)
     shell = ApplicationShell(

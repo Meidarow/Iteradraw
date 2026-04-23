@@ -10,9 +10,8 @@ class TimedSlideshowRequested(Event):
     timer: int
 
 @dataclass(frozen=True)
-class DatabaseVerified(Event):
+class DatabaseStalenessVerified(Event):
     success: bool
-
 
 @dataclass(frozen=True)
 class CrawlingStarted(Event):
@@ -23,6 +22,9 @@ class CrawlingFailed(Event):
     folder: Folder
     error: Exception
 
-
 class CrawlingFinished(Event):
     folder: Folder
+
+
+class SlideshowPrepared(Event):
+    success: bool
