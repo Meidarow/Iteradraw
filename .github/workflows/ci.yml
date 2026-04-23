@@ -22,7 +22,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
       - name: Cache Poetry virtualenv
         uses: actions/cache@v4
@@ -70,7 +70,7 @@ jobs:
       # -------------------------------------------------------------
       - name: Run tests with coverage
         run: |
-          poetry run coverage run -m pytest -v
+          poetry run coverage run --source=src -m pytest -v
           poetry run coverage xml                     # creates coverage.xml
           poetry run coverage report --fail-under=20
 
