@@ -52,6 +52,7 @@ class TestSQLite3DirectoryRepository:
                 sqlite_directory_repo,
                 sqlite_database_in_memory
         ):
+            path = Path(path_str)
             query_node = """
             INSERT INTO directories (dir_name, crawl_time, mod_time) VALUES 
             (?, 0, 0) RETURNING dir_id
@@ -59,12 +60,12 @@ class TestSQLite3DirectoryRepository:
             query_closure = ("INSERT INTO folders_closure (ancestor_id, "
                              "descendant_id, depth) VALUES (?, ?, 0)")
 
-            assert sqlite_directory_repo.is_duplicate(Path(path_str)) == 0
+            assert sqlite_directory_repo.is_duplicate(path) == 0
             dir_id = sqlite_database_in_memory.execute(
-                query_node,
-                (path_str,)).fetchone()["dir_id"]
+                query_node, (path.as_posix(),)
+            ).fetchone()["dir_id"]
             sqlite_database_in_memory.execute(query_closure, (dir_id, dir_id))
-            assert sqlite_directory_repo.is_duplicate(Path(path_str)) != 0
+            assert sqlite_directory_repo.is_duplicate(path) != 0
 
             sqlite_database_in_memory.execute("DELETE FROM folders_closure")
             sqlite_database_in_memory.execute("DELETE FROM directories")
