@@ -1,15 +1,15 @@
-from typing import TYPE_CHECKING
-
 from iteradraw.core.application.commands.slideshow_commands import \
-    DecodeImageCommand, StartTimedSlideshowCommand, NextSlideCommand, PreviousSlideCommand
+    StartTimedSlideshowCommand, NextSlideCommand, \
+    PreviousSlideCommand
+from iteradraw.core.infrastructure.buses.event_bus import EventBus
 from iteradraw.interfaces import CommandHandler
 
-if TYPE_CHECKING:
-    from iteradraw.core.infrastructure import EventBus
 
 class StartTimedSlideshowCommandHandler(CommandHandler[StartTimedSlideshowCommand]):
-    def __init__(self, event_bus: EventBus):
-        pass
+    command_type = StartTimedSlideshowCommand
+
+    def __init__(self, event_bus: EventBus, **_):
+        self.event_bus = event_bus
 
     def handle(self, command: StartTimedSlideshowCommand):
         """Process:
@@ -19,26 +19,19 @@ class StartTimedSlideshowCommandHandler(CommandHandler[StartTimedSlideshowComman
         Dtabase ready
         command playlist service to build playlist
         start timed slideshow"""
-
-class NextSlideCommandHandler(CommandHandler[NextSlideCommand]):
-    def __init__(self, event_bus: EventBus):
         pass
 
-    def handle(self, command: DecodeImageCommand):
+class NextSlideCommandHandler(CommandHandler[NextSlideCommand]):
+    def __init__(self, event_bus: EventBus, **_):
+        pass
+
+    def handle(self, command: NextSlideCommand):
         pass
 
 
 class PreviousSlideCommandHandler(CommandHandler[PreviousSlideCommand]):
-    def __init__(self, event_bus: EventBus):
+    def __init__(self, event_bus: EventBus, **_):
         pass
 
-    def handle(self, command: DecodeImageCommand):
-        pass
-
-
-class DecodeImageCommandHandler(CommandHandler[DecodeImageCommand]):
-    def __init__(self, event_bus: EventBus):
-        pass
-
-    def handle(self, command: DecodeImageCommand):
+    def handle(self, command: PreviousSlideCommand):
         pass
